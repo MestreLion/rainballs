@@ -24,6 +24,7 @@
 import sys
 import pygame
 import math
+from random import randint, random, choice
 
 
 # General options
@@ -31,7 +32,8 @@ BENCHMARK = False
 FULLSCREEN = False
 DEBUG = False
 AUTOPLAY = True
-TRACE = True
+TRACE = False
+BALLS = 10
 
 
 # Colors
@@ -45,13 +47,13 @@ WHITE = (255, 255, 255)
 # Render stuff
 SCREEN_SIZE = (1600, 900)     # Fullscreen ignores this and always use desktop resolution
 FPS = 0 if BENCHMARK else 60  # 0 for unbounded
-BG_COLOR = BLUE
+BG_COLOR = WHITE
 
 
 # Physics stuff - Units in pixels/second
-GRAVITY = (0, -2000)                 # A vector, like everything else
-DAMPING = (1, 0.8)                   # Velocity restitution coefficient of collisions on boundaries
-FRICTION = 0.3                       # Kinetic coefficient of friction
+GRAVITY = (0, -1200)                 # A vector, like everything else
+DAMPING = (1, 1)                     # Velocity restitution coefficient of collisions on boundaries
+FRICTION = 0.0                       # Kinetic coefficient of friction
 TIMESTEP = 1./(FPS or 60)            # dt of physics simulation
 
 EPSILON_V = max(abs(GRAVITY[0]),
@@ -61,9 +63,9 @@ EPSILON_V = max(abs(GRAVITY[0]),
 
 
 # Ball initial values
-radius = 30
+radius = 100
 pos = [50, 800]
-vel = [500, 0]
+vel = [600, 600]
 elast = (1, 0.7)
 
 
@@ -207,8 +209,14 @@ def main(argv=None):
     background.fill(BG_COLOR)
     screen.blit(background, (0,0))
 
-    balls = pygame.sprite.Group(Ball(RED, radius, pos, vel, elasticity=elast),
-                                Ball(GREEN, radius/2, pos, vel))
+    balls = pygame.sprite.Group()
+    for _ in xrange(BALLS):
+        balls.add(Ball(color=(randint(0,255), randint(0,255), randint(0,255)),
+                       radius=randint(10, radius),
+                       position=[randint(100, screen.get_size()[0]-radius),
+                                 randint(100, screen.get_size()[0]-radius)],
+                       velocity=[randint(50, vel[0]), randint(50, vel[1])],
+                       ))
 
     # -------- Main Game Loop -----------
     trace = TRACE
@@ -267,8 +275,13 @@ def main(argv=None):
                     fpslist.append(clock.get_fps())
                     framecounter = 0
                 framecounter += 1
-                if pygame.time.get_ticks() > 5000:
+                if pygame.time.get_ticks() > 10000:
                     done = True
+            elif not args.fullscreen:
+                if framecounter == FPS:
+                    pygame.display.set_caption("%s - FPS: %7.2f" % (caption,clock.get_fps()))
+                    framecounter = 0
+                framecounter += 1
 
             if step:
                 play = step = False
