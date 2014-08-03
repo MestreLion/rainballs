@@ -50,7 +50,7 @@ BG_COLOR = BLACK
 
 # Physics stuff - Units in pixels/second
 GRAVITY = (0, -2000)                 # A vector, like everything else
-DAMPING = (1, 0.8)                   # Velocity restitution coefficient of collisions on boundaries
+DAMPING = (1, 1)                     # Velocity restitution coefficient of collisions on boundaries
 FRICTION = 0.3                       # Kinetic coefficient of friction
 TIMESTEP = 1./(FPS or 60)            # dt of physics simulation
 
@@ -133,7 +133,7 @@ class Ball(pygame.sprite.Sprite):
         def bounce():
             self.printdata("before bounce")
             # Reflect velocity prior to collision, dampered
-            self.velocity[i] = -v * min(self.elasticity[i], DAMPING[i])
+            self.velocity[i] = -(v+self.velocity[i])/2 * min(self.elasticity[i], DAMPING[i])
             # set to zero when low enough
             if abs(self.velocity[i]) < EPSILON_V:
                 self.velocity[i] = 0
