@@ -8,30 +8,6 @@ radius = 50
 color = (0, 255, 0)  # green
 
 
-class Ball(object):
-    def __init__(self, position=[], velocity=[], radius=10, color=(255, 255, 255)):
-        self.position = position[:] or [0, 0]
-        self.velocity = velocity[:] or [0, 0]
-        self.bounds = (screen.get_size()[0] - 2 * radius,
-                       screen.get_size()[1] - 2 * radius)
-
-        self.image = pygame.Surface(2*[radius*2])
-        self.rect = self.image.get_rect()
-        self.rect.x = int(self.position[0])
-        self.rect.y = int(self.position[1])
-        pygame.draw.circle(self.image, color, 2*(radius,), radius)
-
-    def update(self):
-        for i in [0, 1]:
-            self.position[i] += self.velocity[i]
-
-            if self.position[i] < 0 or self.position[i] > self.bounds[i]:
-                self.velocity[i] *= -1
-
-        self.rect.x = int(self.position[0])
-        self.rect.y = int(self.position[1])
-
-
 pygame.init()
 clock = pygame.time.Clock()
 
@@ -39,7 +15,13 @@ screen = pygame.display.set_mode((800, 600))
 background = pygame.Surface(screen.get_size())
 screen.blit(background, (0,0))
 
-ball = Ball(position, velocity, radius, color)
+ball = pygame.Surface(2*[radius*2])
+pygame.draw.circle(ball, color, 2*(radius,), radius)
+bounds = (screen.get_size()[0] - 2 * radius,
+          screen.get_size()[1] - 2 * radius)
+rect = ball.get_rect()
+rect.x = position[0]
+rect.y = position[1]
 
 done = False
 while not done:
@@ -47,9 +29,15 @@ while not done:
         if event.type in [pygame.QUIT, pygame.KEYDOWN]:
             done = True
 
-    screen.blit(background, ball.rect)
-    ball.update()
-    screen.blit(ball, ball.rect)
+    for i in [0, 1]:
+        position[i] += velocity[i]
+        if position[i] < 0 or position[i] > bounds[i]:
+            velocity[i] *= -1
+
+    screen.blit(background, rect)
+    rect.x = position[0]
+    rect.y = position[1]
+    screen.blit(ball, rect)
     pygame.display.update()
     clock.tick(60)
 
