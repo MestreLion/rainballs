@@ -121,8 +121,11 @@ class Ball(pygame.sprite.Sprite):
                             int(screen.get_size()[1] - self.position[1]))
 
 
-    def update(self, elapsed):
+    def update(self, elapsed=None):
         super(Ball, self).update()
+
+        if elapsed is None:
+            elapsed = TIMESTEP
 
         # dt should be constant and small, 1./60 is perfect. But I shall not enforce this here
         dt = elapsed  # Alternatives: TIMESTEP; 1./FPS; 1./60
@@ -251,7 +254,7 @@ def main(argv=None):
 
         if play:
             t1 = pygame.time.get_ticks()
-            balls.update(TIMESTEP)  # real: elapsed/1000.
+            balls.update()  # real dt: elapsed/1000.
             t2 = pygame.time.get_ticks()
             render()
             t3 = pygame.time.get_ticks()
