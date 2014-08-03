@@ -31,7 +31,7 @@ BENCHMARK = False
 FULLSCREEN = False
 DEBUG = False
 AUTOPLAY = True
-TRACE = False
+TRACE = True
 
 
 # Colors
@@ -64,6 +64,7 @@ EPSILON_V = max(abs(GRAVITY[0]),
 radius = 30
 pos = [50, 800]
 vel = [500, 0]
+elast = (1, 0.7)
 
 
 # Some singletons
@@ -84,7 +85,8 @@ class Args(object):
 
 
 class Ball(pygame.sprite.Sprite):
-    def __init__(self, color=WHITE, radius=10, position=[], velocity=[], density=1):
+    def __init__(self, color=WHITE, radius=10, position=[], velocity=[], density=1,
+                 elasticity=(1,1)):
         super(Ball, self).__init__()
 
         # Basic properties
@@ -93,6 +95,7 @@ class Ball(pygame.sprite.Sprite):
         self.position = list(position) or [0, 0]
         self.velocity = list(velocity) or [0, 0]
         self.density = density
+        self.elasticity = elasticity
 
         # Derived properties
         self.area = self.radius * math.pi**2
@@ -127,7 +130,7 @@ class Ball(pygame.sprite.Sprite):
         def bounce():
             self.printdata("before bounce")
             # Reflect velocity prior to collision, dampered
-            self.velocity[i] = v * -DAMPING[i]
+            self.velocity[i] = -v * min(self.elasticity[i], DAMPING[i])
             # set to zero when low enough
             if abs(self.velocity[i]) < EPSILON_V:
                 self.velocity[i] = 0
@@ -200,8 +203,8 @@ def main(argv=None):
     background.fill(BG_COLOR)
     screen.blit(background, (0,0))
 
-    ball = Ball(RED, radius, pos, vel)
-    balls = pygame.sprite.Group(ball)
+    balls = pygame.sprite.Group(Ball(RED, radius, pos, vel, elasticity=elast),
+                                Ball(GREEN, radius/2, pos, vel))
 
     # -------- Main Game Loop -----------
     trace = TRACE
