@@ -47,6 +47,7 @@ WHITE = (255, 255, 255)
 # Render stuff
 SCREEN_SIZE = (1600, 900)     # Fullscreen ignores this and always use desktop resolution
 FPS = 0 if BENCHMARK else 60  # 0 for unbounded
+BG_COLOR = BLACK
 
 
 # Physics stuff - Units in pixels/second
@@ -65,6 +66,11 @@ pos = [20, 20]
 vel = [500, 0]
 
 
+# Some singletons
+args = None
+screen = None
+background = None
+balls = None
 
 
 class Args(object):
@@ -76,22 +82,29 @@ class Args(object):
 
 
 class Ball(pygame.sprite.Sprite):
-    def __init__(self, color=WHITE, radius=1, pos=[0,0], velocity=[0,0]):
+    def __init__(self, color=WHITE, radius=10, position=None, velocity=None, density=1):
         super(Ball, self).__init__()
 
-        self.radius = radius
+        # Basic properties
         self.color = color
-        self.velocity = velocity
+        self.radius = radius
+        self.pos = position[:] or [0, 0]
+        self.velocity = velocity[:] or [0, 0]
+        self.density = density
 
-        self.pos = pos
+        # Derived properties
+        self.area = self.radius * math.pi**2
+        self.mass = self.area * self.density
+        self.bounds = (screen.get_size()[0] - 2 * self.radius,
+                       screen.get_size()[1] - 2 * self.radius)
 
-        self.image = pygame.Surface(2*[radius*2])
-        pygame.draw.circle(self.image, color, 2*(radius,), radius)
+        # Pygame sprite requirements
+        self.image = pygame.Surface(2*[self.radius*2])
         self.rect = self.image.get_rect()
         self.rect.x = int(self.pos[0])
         self.rect.y = int(self.pos[1])
+        pygame.draw.circle(self.image, color, 2*(self.radius,), self.radius)
 
-        self.bounds=(SCREEN_SIZE[0] - 2*self.radius, SCREEN_SIZE[1] - 2*self.radius)
 
     @property
     def on_ground(self):
@@ -100,27 +113,31 @@ class Ball(pygame.sprite.Sprite):
     def update(self, elapsed):
         super(Ball, self).update()
 
-        # For now (perhaps forever), ignore real elapsed time and used a fixed dt
-        dt = elapsed  # Alternatives: TIMESTEP; 1; 1.0/FPS; 60.0/FPS; elapsed/TIMEFRAME
+        # dt should be constant and small, 1.0/60 is perfect. But I shall not enforce this here
+        dt = elapsed  # Alternatives: TIMESTEP; 1.0/FPS; 1.0/60
 
         def bounce():
-            self.printdata()
-            # Reflect velocity, dampered
-            self.velocity[i] *= -DAMPING[i]
+            self.printdata("before bounce")
+            # Reflect velocity prior to collision, dampered
+            self.velocity[i] = v * -DAMPING[i]
             # set to zero when low enough
             if abs(self.velocity[i]) < EPSILON_V:
                 self.velocity[i] = 0
+            self.printdata("after bounce")
 
         if self.velocity == [0, 0] and self.on_ground:
             return
 
         for i in [0, 1]:
+            # Save current values before any change
+            p, v = self.pos[i], self.velocity[i]
+
             # Apply gravity to velocity
             if not (self.on_ground and self.velocity[i] == 0):  # looks sooo hackish...
                 self.velocity[i] += GRAVITY[i] * dt
 
-            # Apply velocity to position
-            self.pos[i] += self.velocity[i] * dt
+            # Apply velocity to position, Velocity Verlet method
+            self.pos[i] += v * dt + GRAVITY[i] * dt**2 / 2.
 
             # Check lower boundary
             if self.pos[i] < 0:
@@ -136,35 +153,42 @@ class Ball(pygame.sprite.Sprite):
         if self.on_ground and self.velocity[1] == 0:
             self.velocity[0] -= math.copysign(min(abs(self.velocity[0]),
                                                   abs(GRAVITY[1] * FRICTION * dt)),
-                                               self.velocity[0])  # self.velocity[0] * friction
+                                               self.velocity[0])
             # Make it stop if low enough
             if abs(self.velocity[0]) < EPSILON_V:
                 self.velocity[0] = 0
-            self.printdata()
 
         self.rect.x = int(self.pos[0])
         self.rect.y = int(self.pos[1])
 
-    def printdata(self):
+    def printdata(self, comment):
         if args.debug:
-            print "p=[%7.2f, %7.2f] v=[%7.2f, %7.2f]" % (self.pos[0], self.pos[1],
-                                                         self.velocity[0], self.velocity[1])
+            print "p=[%7.2f, %7.2f] v=[%7.2f, %7.2f] %s" % (
+                self.pos[0], self.pos[1],
+                self.velocity[0], self.velocity[1],
+                comment)
 
 
 
 
 def main():
-    pygame.init()
-    flags = 0
-    if args.fullscreen:
-        global SCREEN_SIZE
-        flags = pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF
-        SCREEN_SIZE = (pygame.display.Info().current_w,
-                       pygame.display.Info().current_h)
-    screen = pygame.display.set_mode(SCREEN_SIZE, flags)
+    global screen, background, balls
 
-    background=pygame.Surface(screen.get_size())
-    background=background.convert()
+    pygame.init()
+    pygame.display.set_caption("Rain Balls")
+
+    flags = 0
+    size = SCREEN_SIZE
+    if args.fullscreen:
+        flags = pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF
+        size = (pygame.display.Info().current_w,
+                pygame.display.Info().current_h)
+        pygame.mouse.set_visible(False)
+    screen = pygame.display.set_mode(size, flags)
+
+    background = pygame.Surface(screen.get_size()).convert()
+    background.fill(BG_COLOR)
+    screen.blit(background, (0,0))
 
     ball = Ball(RED, radius, pos, vel)
     balls = pygame.sprite.Group(ball)
@@ -184,7 +208,7 @@ def main():
     clock = pygame.time.Clock()
     balls.update(0)
     render()
-    clock.tick(FPS)
+    elapsed = clock.tick(FPS)
 
     rendertimes = []
     updatetimes = []
@@ -202,11 +226,11 @@ def main():
                 elif event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
                     play = not play
                     if args.debug and not play:
-                        ball.printdata()
+                        ball.printdata("Paused")
                 elif event.key == pygame.K_SPACE:
-                    ball.printdata()
                     if play:
                         play = False
+                        ball.printdata("Paused")
                     else:
                         play = step = True
                 elif event.key == pygame.K_ESCAPE:
@@ -214,7 +238,7 @@ def main():
 
         if play:
             t1 = pygame.time.get_ticks()
-            balls.update(TIMESTEP)  # real: clock.get_time()/1000.0
+            balls.update(TIMESTEP)  # real: elapsed/1000.0
             t2 = pygame.time.get_ticks()
             render()
             t3 = pygame.time.get_ticks()
@@ -234,12 +258,13 @@ def main():
                     framecounter = 0
             if step:
                 play = step = False
+                ball.printdata("Frame")
 
-        clock.tick(FPS)
+        elapsed = clock.tick(FPS)
         if args.benchmark and pygame.time.get_ticks() > 5000:
             done = True
 
-    if args.benchmark or args.debug:
+    if fpslist and (args.benchmark or args.debug):
         print sum(fpslist)/len(fpslist)
     pygame.quit()
     return True
