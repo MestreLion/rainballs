@@ -19,8 +19,6 @@
 #    along with this program. See <http://www.gnu.org/licenses/gpl.html>
 #
 # TODO:
-# - Change integration method from Euler to Verlet
-# - Change coordinate system from PC to Euclidian
 # - Create a scale factor to map pixels to abstract meters
 
 import sys
@@ -51,18 +49,20 @@ BG_COLOR = BLACK
 
 
 # Physics stuff - Units in pixels/second
-GRAVITY = (0, 2000)                  # A vector, like everything else
+GRAVITY = (0, -2000)                 # A vector, like everything else
 DAMPING = (1, 0.8)                   # Velocity restitution coefficient of collisions on boundaries
 FRICTION = 0.3                       # Kinetic coefficient of friction
 TIMESTEP = 1./(FPS or 60)            # dt of physics simulation
-EPSILON_V = max(GRAVITY)*TIMESTEP/2  # Velocity resolution threshold
+
+EPSILON_V = max(abs(GRAVITY[0]),
+                abs(GRAVITY[1]))*TIMESTEP/2  # Velocity resolution threshold
 #EPSILON_S = 0.1
 #SCALE = 100  # How many pixels is a "meter"
 
 
 # Ball initial values
-radius = 50
-pos = [20, 20]
+radius = 30
+pos = [50, 800]
 vel = [500, 0]
 
 
@@ -97,21 +97,25 @@ class Ball(pygame.sprite.Sprite):
         # Derived properties
         self.area = self.radius * math.pi**2
         self.mass = self.area * self.density
-        self.bounds = (screen.get_size()[0] - 2 * self.radius,
-                       screen.get_size()[1] - 2 * self.radius)
+        self.bounds = (screen.get_size()[0] - self.radius,
+                       screen.get_size()[1] - self.radius)
 
         # Pygame sprite requirements
         self.image = pygame.Surface(2*[self.radius*2])
         self.rect = self.image.get_rect()
-        self.rect.x = int(self.position[0])
-        self.rect.y = int(self.position[1])
+        self._update_rect()
         self.image.fill(BG_COLOR)
-        pygame.draw.circle(self.image, color, 2*(self.radius,), self.radius)
+        pygame.draw.circle(self.image, self.color, 2*(self.radius,), self.radius)
 
 
     @property
     def on_ground(self):
-        return self.position[1] == self.bounds[1]
+        return self.position[1] == self.radius
+
+
+    def _update_rect(self):
+        self.rect.center = (int(self.position[0]),
+                            int(screen.get_size()[1] - self.position[1]))
 
 
     def update(self, elapsed):
@@ -144,8 +148,8 @@ class Ball(pygame.sprite.Sprite):
             self.position[i] += v * dt + GRAVITY[i] * dt**2 / 2.
 
             # Check lower boundary
-            if self.position[i] < 0:
-                self.position[i] = 0  # This could be refined... perhaps reflected? -self.position[i]
+            if self.position[i] < self.radius:
+                self.position[i] = self.radius  # This could be refined... perhaps reflected? -self.position[i]
                 bounce()
 
             # Check upper boundary
@@ -162,8 +166,7 @@ class Ball(pygame.sprite.Sprite):
             if abs(self.velocity[0]) < EPSILON_V:
                 self.velocity[0] = 0
 
-        self.rect.x = int(self.position[0])
-        self.rect.y = int(self.position[1])
+        self._update_rect()
 
 
     def printdata(self, comment):
