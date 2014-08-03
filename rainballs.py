@@ -45,12 +45,12 @@ WHITE = (255, 255, 255)
 # Render stuff
 SCREEN_SIZE = (1600, 900)     # Fullscreen ignores this and always use desktop resolution
 FPS = 0 if BENCHMARK else 60  # 0 for unbounded
-BG_COLOR = BLACK
+BG_COLOR = BLUE
 
 
 # Physics stuff - Units in pixels/second
 GRAVITY = (0, -2000)                 # A vector, like everything else
-DAMPING = (1, 1)                     # Velocity restitution coefficient of collisions on boundaries
+DAMPING = (1, 0.8)                   # Velocity restitution coefficient of collisions on boundaries
 FRICTION = 0.3                       # Kinetic coefficient of friction
 TIMESTEP = 1./(FPS or 60)            # dt of physics simulation
 
@@ -108,6 +108,7 @@ class Ball(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self._update_rect()
         self.image.fill(BG_COLOR)
+        self.image.set_colorkey(BG_COLOR)
         pygame.draw.circle(self.image, self.color, 2*(self.radius,), self.radius)
 
 
