@@ -29,7 +29,7 @@ import math
 
 
 # General options
-BENCHMARK = True
+BENCHMARK = False
 FULLSCREEN = False
 DEBUG = False
 AUTOPLAY = True
@@ -84,14 +84,14 @@ class Args(object):
 
 
 class Ball(pygame.sprite.Sprite):
-    def __init__(self, color=WHITE, radius=10, position=None, velocity=None, density=1):
+    def __init__(self, color=WHITE, radius=10, position=[], velocity=[], density=1):
         super(Ball, self).__init__()
 
         # Basic properties
         self.color = color
         self.radius = radius
-        self.position = position[:] or [0, 0]
-        self.velocity = velocity[:] or [0, 0]
+        self.position = list(position) or [0, 0]
+        self.velocity = list(velocity) or [0, 0]
         self.density = density
 
         # Derived properties
@@ -105,6 +105,7 @@ class Ball(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
         self.rect.x = int(self.position[0])
         self.rect.y = int(self.position[1])
+        self.image.fill(BG_COLOR)
         pygame.draw.circle(self.image, color, 2*(self.radius,), self.radius)
 
 
@@ -181,7 +182,6 @@ def main(argv=None):
     # Soon to be replaced by a proper argparse
     args = Args(fullscreen=FULLSCREEN, benchmark=BENCHMARK, debug=DEBUG)
 
-
     pygame.init()
     pygame.display.set_caption("Rain Balls")
 
@@ -189,12 +189,11 @@ def main(argv=None):
     size = SCREEN_SIZE
     if args.fullscreen:
         flags = pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF
-        size = (pygame.display.Info().current_w,
-                pygame.display.Info().current_h)
+        size = (0, 0)  # current desktop resolution
         pygame.mouse.set_visible(False)
     screen = pygame.display.set_mode(size, flags)
 
-    background = pygame.Surface(screen.get_size()).convert()
+    background = pygame.Surface(screen.get_size())
     background.fill(BG_COLOR)
     screen.blit(background, (0,0))
 
@@ -234,11 +233,11 @@ def main(argv=None):
                 elif event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
                     play = not play
                     if not play:
-                        ball.printdata("Paused")
+                        balls.sprites()[0].printdata("Paused")
                 elif event.key == pygame.K_SPACE:
                     if play:
                         play = False
-                        ball.printdata("Paused")
+                        balls.sprites()[0].printdata("Paused")
                     else:
                         play = step = True
                 elif event.key == pygame.K_ESCAPE:
@@ -263,11 +262,11 @@ def main(argv=None):
 
             if step:
                 play = step = False
-                ball.printdata("Frame")
+                balls.sprites()[0].printdata("Frame")
 
         elapsed = clock.tick(FPS)
 
-    if args.benchmark:
+    if args.benchmark and fpslist :
         def printtimes(name, times, limit, lowerisbetter=False):
             fail = sum(1 for x in times if (x<limit if lowerisbetter else x>limit))
             total = len(times)
