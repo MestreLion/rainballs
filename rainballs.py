@@ -31,9 +31,9 @@ import math
 # General options
 BENCHMARK = False
 FULLSCREEN = False
-DEBUG = True
+DEBUG = False
 AUTOPLAY = True
-TRACE = False
+TRACE = True
 
 
 # Colors
@@ -54,14 +54,14 @@ BG_COLOR = BLACK
 GRAVITY = (0, 2000)                  # A vector, like everything else
 DAMPING = (1, 0.8)                   # Velocity restitution coefficient of collisions on boundaries
 FRICTION = 0.3                       # Kinetic coefficient of friction
-TIMESTEP = 1.0/(FPS or 60)           # dt of physics simulation
+TIMESTEP = 1./(FPS or 60)            # dt of physics simulation
 EPSILON_V = max(GRAVITY)*TIMESTEP/2  # Velocity resolution threshold
 #EPSILON_S = 0.1
 #SCALE = 100  # How many pixels is a "meter"
 
 
 # Ball initial values
-radius = 50
+radius = 10
 pos = [20, 20]
 vel = [500, 0]
 
@@ -71,6 +71,8 @@ args = None
 screen = None
 background = None
 balls = None
+
+
 
 
 class Args(object):
@@ -88,7 +90,7 @@ class Ball(pygame.sprite.Sprite):
         # Basic properties
         self.color = color
         self.radius = radius
-        self.pos = position[:] or [0, 0]
+        self.position = position[:] or [0, 0]
         self.velocity = velocity[:] or [0, 0]
         self.density = density
 
@@ -101,20 +103,21 @@ class Ball(pygame.sprite.Sprite):
         # Pygame sprite requirements
         self.image = pygame.Surface(2*[self.radius*2])
         self.rect = self.image.get_rect()
-        self.rect.x = int(self.pos[0])
-        self.rect.y = int(self.pos[1])
+        self.rect.x = int(self.position[0])
+        self.rect.y = int(self.position[1])
         pygame.draw.circle(self.image, color, 2*(self.radius,), self.radius)
 
 
     @property
     def on_ground(self):
-        return self.pos[1] == self.bounds[1]
+        return self.position[1] == self.bounds[1]
+
 
     def update(self, elapsed):
         super(Ball, self).update()
 
-        # dt should be constant and small, 1.0/60 is perfect. But I shall not enforce this here
-        dt = elapsed  # Alternatives: TIMESTEP; 1.0/FPS; 1.0/60
+        # dt should be constant and small, 1./60 is perfect. But I shall not enforce this here
+        dt = elapsed  # Alternatives: TIMESTEP; 1./FPS; 1./60
 
         def bounce():
             self.printdata("before bounce")
@@ -130,23 +133,23 @@ class Ball(pygame.sprite.Sprite):
 
         for i in [0, 1]:
             # Save current values before any change
-            p, v = self.pos[i], self.velocity[i]
+            p, v = self.position[i], self.velocity[i]
 
             # Apply gravity to velocity
             if not (self.on_ground and self.velocity[i] == 0):  # looks sooo hackish...
                 self.velocity[i] += GRAVITY[i] * dt
 
             # Apply velocity to position, Velocity Verlet method
-            self.pos[i] += v * dt + GRAVITY[i] * dt**2 / 2.
+            self.position[i] += v * dt + GRAVITY[i] * dt**2 / 2.
 
             # Check lower boundary
-            if self.pos[i] < 0:
-                self.pos[i] = 0  # This could be refined... perhaps reflected? -self.pos[i]
+            if self.position[i] < 0:
+                self.position[i] = 0  # This could be refined... perhaps reflected? -self.position[i]
                 bounce()
 
             # Check upper boundary
-            elif self.pos[i] > self.bounds[i]:
-                self.pos[i] = self.bounds[i]  # Reflection would be self.bounds[i]-(self.pos[i]-self.bounds[i])
+            elif self.position[i] > self.bounds[i]:
+                self.position[i] = self.bounds[i]  # Reflection would be self.bounds[i]-(self.position[i]-self.bounds[i])
                 bounce()
 
         # Apply friction if ball is sliding on ground
@@ -158,13 +161,14 @@ class Ball(pygame.sprite.Sprite):
             if abs(self.velocity[0]) < EPSILON_V:
                 self.velocity[0] = 0
 
-        self.rect.x = int(self.pos[0])
-        self.rect.y = int(self.pos[1])
+        self.rect.x = int(self.position[0])
+        self.rect.y = int(self.position[1])
+
 
     def printdata(self, comment):
         if args.debug:
             print "p=[%7.2f, %7.2f] v=[%7.2f, %7.2f] %s" % (
-                self.pos[0], self.pos[1],
+                self.position[0], self.position[1],
                 self.velocity[0], self.velocity[1],
                 comment)
 
@@ -238,7 +242,7 @@ def main():
 
         if play:
             t1 = pygame.time.get_ticks()
-            balls.update(TIMESTEP)  # real: elapsed/1000.0
+            balls.update(TIMESTEP)  # real: elapsed/1000.
             t2 = pygame.time.get_ticks()
             render()
             t3 = pygame.time.get_ticks()
