@@ -8,10 +8,8 @@ radius = 50
 color = (0, 255, 0)  # green
 
 
-class Ball(pygame.sprite.Sprite):
+class Ball(object):
     def __init__(self, position=[], velocity=[], radius=10, color=(255, 255, 255)):
-        super(Ball, self).__init__()
-
         self.position = position[:] or [0, 0]
         self.velocity = velocity[:] or [0, 0]
         self.bounds = (screen.get_size()[0] - 2 * radius,
@@ -24,8 +22,6 @@ class Ball(pygame.sprite.Sprite):
         pygame.draw.circle(self.image, color, 2*(radius,), radius)
 
     def update(self):
-        super(Ball, self).update()
-
         for i in [0, 1]:
             self.position[i] += self.velocity[i]
 
@@ -44,8 +40,6 @@ background = pygame.Surface(screen.get_size())
 screen.blit(background, (0,0))
 
 ball = Ball(position, velocity, radius, color)
-balls = pygame.sprite.Group(ball)
-
 
 done = False
 while not done:
@@ -53,9 +47,9 @@ while not done:
         if event.type in [pygame.QUIT, pygame.KEYDOWN]:
             done = True
 
-    balls.update()
-    balls.clear(screen, background)
-    balls.draw(screen)
+    screen.blit(background, ball.rect)
+    ball.update()
+    screen.blit(ball, ball.rect)
     pygame.display.update()
     clock.tick(60)
 
