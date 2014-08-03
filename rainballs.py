@@ -175,8 +175,12 @@ class Ball(pygame.sprite.Sprite):
 
 
 
-def main():
-    global screen, background, balls
+def main(argv=None):
+    global screen, background, balls, args
+
+    # Soon to be replaced by a proper argparse
+    args = Args(fullscreen=FULLSCREEN, benchmark=BENCHMARK, debug=DEBUG)
+
 
     pygame.init()
     pygame.display.set_caption("Rain Balls")
@@ -282,6 +286,4 @@ def main():
 
 
 if __name__ == "__main__":
-    # Soon to be replaced by a proper argparse
-    args = Args(fullscreen=FULLSCREEN, benchmark=BENCHMARK, debug=DEBUG)
-    sys.exit(0 if main() else 1)
+    sys.exit(0 if main(sys.argv) else 1)
