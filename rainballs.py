@@ -29,11 +29,11 @@ import math
 
 
 # General options
-BENCHMARK = False
+BENCHMARK = True
 FULLSCREEN = False
 DEBUG = False
 AUTOPLAY = True
-TRACE = True
+TRACE = False
 
 
 # Colors
@@ -61,7 +61,7 @@ EPSILON_V = max(GRAVITY)*TIMESTEP/2  # Velocity resolution threshold
 
 
 # Ball initial values
-radius = 10
+radius = 50
 pos = [20, 20]
 vel = [500, 0]
 
@@ -229,7 +229,7 @@ def main():
                     trace = not trace
                 elif event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
                     play = not play
-                    if args.debug and not play:
+                    if not play:
                         ball.printdata("Paused")
                 elif event.key == pygame.K_SPACE:
                     if play:
@@ -246,30 +246,35 @@ def main():
             t2 = pygame.time.get_ticks()
             render()
             t3 = pygame.time.get_ticks()
-            if args.benchmark or args.debug:
-                if args.debug:
-                    updatetimes.append(t2 - t1)
-                    rendertimes.append(t3 - t2)
-                framecounter += 1
-                if framecounter == 100:
+
+            if args.benchmark:
+                updatetimes.append(t2 - t1)
+                rendertimes.append(t3 - t2)
+                if framecounter == 10:
                     fpslist.append(clock.get_fps())
-                    if args.debug:
-                        for times in [updatetimes, rendertimes]:
-                            print "times: %2d, %2d, %02d" % (
-                                min(times), sum(times)/framecounter, max(times))
-                        updatetimes = []
-                        rendertimes = []
                     framecounter = 0
+                framecounter += 1
+                if pygame.time.get_ticks() > 5000:
+                    done = True
+
             if step:
                 play = step = False
                 ball.printdata("Frame")
 
         elapsed = clock.tick(FPS)
-        if args.benchmark and pygame.time.get_ticks() > 5000:
-            done = True
 
-    if fpslist and (args.benchmark or args.debug):
-        print sum(fpslist)/len(fpslist)
+    if args.benchmark:
+        def printtimes(name, times, limit, lowerisbetter=False):
+            fail = sum(1 for x in times if (x<limit if lowerisbetter else x>limit))
+            total = len(times)
+            failp = 100. * fail / total
+            print ("%s: " + 6*"%3d  ") % (
+                name, min(times), sum(times)/total, max(times), limit, fail, failp)
+        print      "t (ms): min, avg, max, top, fail   %"
+        printtimes("Update", updatetimes, TIMESTEP*1000)
+        printtimes("Render", rendertimes, TIMESTEP*1000)
+        printtimes("FPS   ", fpslist, 1./TIMESTEP, True)
+
     pygame.quit()
     return True
 
