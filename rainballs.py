@@ -195,7 +195,16 @@ def main(argv=None):
     args = Args(fullscreen=FULLSCREEN, benchmark=BENCHMARK, debug=DEBUG)
 
     pygame.init()
-    pygame.display.set_caption("Rain Balls")
+
+    # Set caption and icon
+    caption = "Rain Balls"
+    pygame.display.set_caption(caption)
+    if sys.platform.startswith("linux"):
+        try:
+            icon = pygame.image.load("/usr/share/pyshared/pygame/pygame_icon.tiff")
+            pygame.display.set_icon(icon)
+        except pygame.error as e:
+            print e
 
     flags = 0
     size = SCREEN_SIZE
