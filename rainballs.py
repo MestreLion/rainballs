@@ -3,7 +3,7 @@
 #
 # rainballs - A Rain of Balls
 #
-#    Copyright (C) 2013 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
+#    Copyright (C) 2014 Rodrigo Silva (MestreLion) <linux@rodrigosilva.com>
 #
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -20,6 +20,8 @@
 #
 # TODO:
 # - Create a scale factor to map pixels to abstract meters
+# - Fix the damn collision response to avoid infinite bumping!
+# - Do so without breaking fully elastical bounces!
 
 import sys
 import pygame
@@ -188,7 +190,8 @@ class Ball(pygame.sprite.Sprite):
 
 
 
-def main(argv=None):
+def main(*argv):
+    """ Main Program """
     global screen, background, balls, args
 
     # Soon to be replaced by a proper argparse
@@ -206,18 +209,21 @@ def main(argv=None):
         except pygame.error as e:
             print e
 
+    # Set the screen
     flags = 0
     size = SCREEN_SIZE
     if args.fullscreen:
-        flags = pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF
+        flags |= pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF
         size = (0, 0)  # current desktop resolution
         pygame.mouse.set_visible(False)
     screen = pygame.display.set_mode(size, flags)
 
+    # Set the background
     background = pygame.Surface(screen.get_size())
     background.fill(BG_COLOR)
     screen.blit(background, (0,0))
 
+    # Create the balls
     balls = pygame.sprite.Group()
     for _ in xrange(BALLS):
         balls.add(Ball(color=(randint(0,255), randint(0,255), randint(0,255)),
@@ -251,24 +257,24 @@ def main(argv=None):
     done = False
     while not done:
         for event in pygame.event.get():
-            if event.type == pygame.QUIT:
+            if (event.type == pygame.QUIT or
+                event.type == pygame.KEYDOWN and event.key == pygame.K_ESCAPE):
                 done = True
-            elif event.type == pygame.KEYDOWN:
+
+            if event.type == pygame.KEYDOWN:
                 if event.key in [pygame.K_LCTRL, pygame.K_RCTRL]:
                     screen.blit(background, background.get_rect())
                     trace = not trace
-                elif event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
+                if event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
                     play = not play
                     if not play:
                         balls.sprites()[0].printdata("Paused")
-                elif event.key == pygame.K_SPACE:
+                if event.key == pygame.K_SPACE:
                     if play:
                         play = False
                         balls.sprites()[0].printdata("Paused")
                     else:
                         play = step = True
-                elif event.key == pygame.K_ESCAPE:
-                    done = True
 
         if play:
             t1 = pygame.time.get_ticks()
@@ -317,4 +323,4 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    sys.exit(0 if main(sys.argv) else 1)
+    sys.exit(0 if main(*sys.argv[1:]) else 1)
