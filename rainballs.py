@@ -179,14 +179,51 @@ class Ball(pygame.sprite.Sprite):
 
 
     def collide(self, other):
-        print "collide! %r %r at %s" % (self.color, other.color, self.position)
-        offset = 1 * math.copysign(1, self.velocity[0])
-        self.position[0]  -= offset
-        other.position[0] += offset
-        self.velocity[0]  *= -1
-        other.velocity[0] *= -1
-        self._update_rect()
-        other._update_rect()
+        # Do nothing for self "collisions"
+        if other is self:
+            return
+
+        # Calculate the subtraction vector and its magnitude squared
+        dv = [other.position[0] - self.position[0],
+              other.position[1] - self.position[1]]
+        mag2 = dv[0]**2 + dv[1]**2
+
+        # Check for false positives from rect collision detection
+        # by testing if distance^2 < (sum of radii)^2
+        radsum = self.radius + other.radius
+        if mag2 >= radsum**2:
+            self.printdata("False Positive")
+            return
+
+        # Calculate vector magnitude, which is also the distance between the balls
+        # and the overlap width (= distance - sum of radii)
+        dvmag = math.sqrt(mag2)
+        overlap = abs(dvmag - radsum)
+
+        print "collide! %r %r at [%.2f, %.2f], %.2f overlap" % (
+            self.color, other.color, self.position[0], self.position[0], overlap)
+
+        # Calculate the normal, the unit vector from centers to collision point
+        # It always points in direction from self towards other
+        normal = [dv[0]/dvmag, dv[1]/dvmag]
+
+        # Use normal to calculate new position and velocity
+        for circle in [self, other]:
+
+            # Move circles away from each other by overlap amount at normal direction
+            circle.position[0] -= overlap/2 * normal[0]
+            circle.position[1] -= overlap/2 * normal[1]
+            circle._update_rect()
+
+            # Adjust the velocities by rotating current velocity to the normal's direction
+            # (ie, multiply normal by current velocity magnitude)
+            mag = math.sqrt(circle.velocity[0]**2 + circle.velocity[1]**2)
+            circle.velocity[0] = mag * -normal[0]
+            circle.velocity[1] = mag * -normal[1]
+
+            # rinse and repeat for other, using a reflected normal
+            normal[0] *= -1
+            normal[1] *= -1
 
 
     def printdata(self, comment):
