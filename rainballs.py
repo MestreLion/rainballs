@@ -48,15 +48,15 @@ WHITE = (255, 255, 255)
 
 # Render stuff
 SCREEN_SIZE = (1600, 900)     # Fullscreen ignores this and always use desktop resolution
-FPS = 0 if BENCHMARK else 60  # 0 for unbounded
+FPS = 60  # 0 for unbounded
 BG_COLOR = WHITE
 
 
 # Physics stuff - Units in pixels/second
-GRAVITY = (0, 0)                 # A vector, like everything else
-DAMPING = (1, 1)                     # Velocity restitution coefficient of collisions on boundaries
-FRICTION = 0                         # Kinetic coefficient of friction
-TIMESTEP = 1./(FPS or 60)            # dt of physics simulation
+GRAVITY = (0, 0)   # A vector, like everything else
+DAMPING = (1, 1)   # Velocity restitution coefficient of collisions on boundaries
+FRICTION = 0       # Kinetic coefficient of friction
+TIMESTEP = 1./FPS  # dt of physics simulation. Later to be FPS-independent
 
 EPSILON_V = max(abs(GRAVITY[0]),
                 abs(GRAVITY[1]))*TIMESTEP/2  # Velocity resolution threshold
@@ -240,12 +240,14 @@ class Ball(pygame.sprite.Sprite):
 
 def main(*argv):
     """ Main Program """
-    global screen, background, balls, args
+    global screen, background, balls, args, FPS
 
     # Soon to be replaced by a proper argparse
     args = Args(fullscreen="--fullscreen" in argv or FULLSCREEN,
                 benchmark="--benchmark" in argv or BENCHMARK,
                 debug="--debug" in argv or DEBUG)
+    if args.benchmark:
+        FPS = 0
 
     pygame.init()
 
@@ -303,7 +305,7 @@ def main(*argv):
     rendertimes = []
     updatetimes = []
     fpslist = []
-    framecounter = 0
+    frames = 0  # not absolute! Gets reset at intervals
     done = False
     while not done:
         for event in pygame.event.get():
@@ -342,21 +344,20 @@ def main(*argv):
             t2 = pygame.time.get_ticks()
             render()
             t3 = pygame.time.get_ticks()
+            frames += 1
 
             if args.benchmark:
                 updatetimes.append(t2 - t1)
                 rendertimes.append(t3 - t2)
-                if framecounter == 10:
+                if frames % 15 == 0:
                     fpslist.append(clock.get_fps())
-                    framecounter = 0
-                framecounter += 1
                 if pygame.time.get_ticks() > 10000:
                     done = True
-            elif not args.fullscreen:
-                if framecounter == FPS:
+
+            if frames == (FPS or 100):
+                frames = 0
+                if not args.fullscreen:
                     pygame.display.set_caption("%s - FPS: %7.2f" % (caption,clock.get_fps()))
-                    framecounter = 0
-                framecounter += 1
 
             if step:
                 play = step = False
