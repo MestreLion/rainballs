@@ -33,9 +33,9 @@ from random import randint, random, choice
 BENCHMARK = False
 FULLSCREEN = False
 DEBUG = False
-AUTOPLAY = True
+AUTOPLAY = False
 TRACE = False
-BALLS = 15
+BALLS = 2
 
 
 # Colors
@@ -47,7 +47,7 @@ WHITE = (255, 255, 255)
 
 
 # Render stuff
-SCREEN_SIZE = (1600, 900)     # Fullscreen ignores this and always use desktop resolution
+SCREEN_SIZE = (800, 800)     # Fullscreen ignores this and always use desktop resolution
 FPS = 60  # 0 for unbounded
 BG_COLOR = WHITE
 
@@ -65,9 +65,9 @@ EPSILON_V = max(abs(GRAVITY[0]),
 
 
 # Ball initial values
-radius = 120
-pos = [100, 300]
-vel = [250, 250]
+radius = 100
+pos = [SCREEN_SIZE[0], 0]
+vel = [500, 0]
 elast = (1, 0.7)
 
 
@@ -106,6 +106,7 @@ class Ball(pygame.sprite.Sprite):
         self.mass = self.area * self.density
         self.bounds = (screen.get_size()[0] - self.radius,
                        screen.get_size()[1] - self.radius)
+        self.wallp = [0, 0]  # net momentum "absorbed" by the "infinite-mass" walls. What a dirty hack :P
 
         # Pygame sprite requirements
         self.image = pygame.Surface(2*[self.radius*2])
@@ -136,8 +137,12 @@ class Ball(pygame.sprite.Sprite):
         dt = elapsed  # Alternatives: TIMESTEP; 1./FPS; 1./60
 
         def bounce():
-            # Reflect velocity prior to collision, dampered
-            self.velocity[i] = -(v+self.velocity[i])/2 * min(self.elasticity[i], DAMPING[i])
+            # Save the momentum that will be absorbed by the wall
+            self.wallp[i] += self.mass * 2 * self.velocity[i]
+
+            # Reflect velocity, dampered
+            self.velocity[i] *= -1 * min(self.elasticity[i], DAMPING[i])
+
             # set to zero when low enough
             if abs(self.velocity[i]) < EPSILON_V:
                 self.velocity[i] = 0
@@ -146,15 +151,12 @@ class Ball(pygame.sprite.Sprite):
             return
 
         for i in [0, 1]:
-            # Save current values before any change
-            p, v = self.position[i], self.velocity[i]
+            # Apply velocity to position, Velocity Verlet method
+            self.position[i] += self.velocity[i] * dt + GRAVITY[i] * dt**2 / 2.
 
             # Apply gravity to velocity
             if not (self.on_ground and self.velocity[i] == 0):  # looks sooo hackish...
                 self.velocity[i] += GRAVITY[i] * dt
-
-            # Apply velocity to position, Velocity Verlet method
-            self.position[i] += v * dt + GRAVITY[i] * dt**2 / 2.
 
             # Check lower boundary
             if self.position[i] < self.radius:
@@ -182,6 +184,8 @@ class Ball(pygame.sprite.Sprite):
         # Do nothing on self "collisions"
         if other is self:
             return
+
+        assert self.position != other.position, "Can not collide balls with same center"
 
         # Calculate the subtraction vector and its magnitude squared
         dv = [other.position[0] - self.position[0],
@@ -218,9 +222,9 @@ class Ball(pygame.sprite.Sprite):
 
             # Adjust the velocities by rotating current velocity to the normal's direction
             # (ie, multiply normal by current velocity magnitude)
-            mag = math.sqrt(circle.velocity[0]**2 + circle.velocity[1]**2)
-            circle.velocity[0] = mag * -normal[0]
-            circle.velocity[1] = mag * -normal[1]
+            vmag = math.sqrt(circle.velocity[0]**2 + circle.velocity[1]**2)
+            circle.velocity[0] = vmag * -normal[0]
+            circle.velocity[1] = vmag * -normal[1]
 
             # rinse and repeat for other, using a reflected normal
             normal[0] *= -1
@@ -277,13 +281,8 @@ def main(*argv):
 
     # Create the balls
     balls = pygame.sprite.Group()
-    for _ in xrange(BALLS):
-        balls.add(Ball(color=(randint(0,255), randint(0,255), randint(0,255)),
-                       radius=randint(10, radius),
-                       position=[randint(100, screen.get_size()[0]-radius),
-                                 randint(100, screen.get_size()[0]-radius)],
-                       velocity=[randint(50, 50+vel[0]), randint(50, 50+vel[1])],
-                       ))
+    balls.add(Ball(color=(randint(0,255), randint(0,255), randint(0,255)), radius=100, position=[150, 150], velocity=[ 100, 300]),
+              Ball(color=(randint(0,255), randint(0,255), randint(0,255)), radius=100, position=[650, 150], velocity=[-100, 300]),)
 
     # -------- Main Game Loop -----------
     trace = TRACE
@@ -356,8 +355,20 @@ def main(*argv):
 
             if frames == (FPS or 100):
                 frames = 0
+
+                # Calculate kinetic energy and linear momentum
+                # P must be always constant, also E if damping is 1
+                P = [0, 0]
+                E = 0
+                for ball in balls:
+                    P[0] += ball.mass * ball.velocity[0] + ball.wallp[0]
+                    P[1] += ball.mass * ball.velocity[1] + ball.wallp[1]
+                    E += ball.mass * math.sqrt(ball.velocity[0]**2 + ball.velocity[1]**2)**2 / 2.
+
                 if not args.fullscreen:
-                    pygame.display.set_caption("%s - FPS: %7.2f" % (caption,clock.get_fps()))
+                    pygame.display.set_caption(
+                        "%s - FPS: %.1f - Energy: %.1f, Momentum: [%.1f, %.1f]" % (
+                        caption,clock.get_fps(), E, P[0], P[1]))
 
             if step:
                 play = step = False
