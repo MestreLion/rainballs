@@ -32,10 +32,10 @@ from random import randint, random, choice
 # General options
 BENCHMARK = False
 FULLSCREEN = False
-DEBUG = True
+DEBUG = False
 AUTOPLAY = True
 TRACE = False
-BALLS = 2
+BALLS = 15
 
 
 # Colors
@@ -47,9 +47,9 @@ WHITE = (255, 255, 255)
 
 
 # Render stuff
-SCREEN_SIZE = (600, 600)     # Fullscreen ignores this and always use desktop resolution
+SCREEN_SIZE = (1600, 900)     # Fullscreen ignores this and always use desktop resolution
 FPS = 0 if BENCHMARK else 60  # 0 for unbounded
-BG_COLOR = BLUE
+BG_COLOR = WHITE
 
 
 # Physics stuff - Units in pixels/second
@@ -65,9 +65,9 @@ EPSILON_V = max(abs(GRAVITY[0]),
 
 
 # Ball initial values
-radius = 100
+radius = 120
 pos = [100, 300]
-vel = [300, 0]
+vel = [250, 250]
 elast = (1, 0.7)
 
 
@@ -179,7 +179,7 @@ class Ball(pygame.sprite.Sprite):
 
 
     def collide(self, other):
-        # Do nothing for self "collisions"
+        # Do nothing on self "collisions"
         if other is self:
             return
 
@@ -200,8 +200,9 @@ class Ball(pygame.sprite.Sprite):
         dvmag = math.sqrt(mag2)
         overlap = abs(dvmag - radsum)
 
-        print "collide! %r %r at [%.2f, %.2f], %.2f overlap" % (
-            self.color, other.color, self.position[0], self.position[0], overlap)
+        if args.debug:
+            print "collide! %r %r at [%.2f, %.2f], %.2f overlap" % (
+                self.color, other.color, self.position[0], self.position[0], overlap)
 
         # Calculate the normal, the unit vector from centers to collision point
         # It always points in direction from self towards other
@@ -274,16 +275,13 @@ def main(*argv):
 
     # Create the balls
     balls = pygame.sprite.Group()
-    balls.add(Ball(color=RED,   radius=radius, position=pos, velocity=vel))
-    balls.add(Ball(color=GREEN, radius=radius,
-                   position=[500, pos[1]+150], velocity=[-vel[0],vel[1]]))
-#     for _ in xrange(BALLS):
-#         balls.add(Ball(color=(randint(0,255), randint(0,255), randint(0,255)),
-#                        radius=randint(10, radius),
-#                        position=[randint(100, screen.get_size()[0]-radius),
-#                                  randint(100, screen.get_size()[0]-radius)],
-#                        velocity=[randint(50, vel[0]), randint(50, vel[1])],
-#                        ))
+    for _ in xrange(BALLS):
+        balls.add(Ball(color=(randint(0,255), randint(0,255), randint(0,255)),
+                       radius=randint(10, radius),
+                       position=[randint(100, screen.get_size()[0]-radius),
+                                 randint(100, screen.get_size()[0]-radius)],
+                       velocity=[randint(50, 50+vel[0]), randint(50, 50+vel[1])],
+                       ))
 
     # -------- Main Game Loop -----------
     trace = TRACE
@@ -335,12 +333,10 @@ def main(*argv):
             balls.update()  # real dt: elapsed/1000.
 
             # Collision detection and resolution
-            # TODO: remove ball from balls (use temp group) after processing, to avoid redundant checks
-            for ball in balls:
-                for other in pygame.sprite.spritecollide(ball, balls, False):
-                    if other is not ball:
-                        ball.collide(other)
-                break
+            balllist = list(balls)
+            for i, ball in enumerate(balllist[:-1]):
+                for other in pygame.sprite.spritecollide(ball, balllist[i+1:], False):
+                    ball.collide(other)
 
             # Draw
             t2 = pygame.time.get_ticks()
