@@ -242,7 +242,9 @@ def main(*argv):
     global screen, background, balls, args
 
     # Soon to be replaced by a proper argparse
-    args = Args(fullscreen=FULLSCREEN, benchmark=BENCHMARK, debug=DEBUG)
+    args = Args(fullscreen="--fullscreen" in argv or FULLSCREEN,
+                benchmark="--benchmark" in argv or BENCHMARK,
+                debug="--debug" in argv or DEBUG)
 
     pygame.init()
 
