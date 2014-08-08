@@ -181,11 +181,9 @@ class Ball(pygame.sprite.Sprite):
 
 
     def collide(self, other):
-        # Do nothing on self "collisions"
-        if other is self:
+        # Do nothing on self "collisions" or when center coincide
+        if other is self or self.position == other.position:
             return
-
-        assert self.position != other.position, "Can not collide balls with same center"
 
         # Calculate the subtraction vector and its magnitude squared
         dv = [other.position[0] - self.position[0],
@@ -193,7 +191,7 @@ class Ball(pygame.sprite.Sprite):
         mag2 = dv[0]**2 + dv[1]**2
 
         # Check for false positives from rect collision detection
-        # by testing if distance^2 < (sum of radii)^2
+        # by testing if distance^2 >= (sum of radii)^2
         radsum = self.radius + other.radius
         if mag2 >= radsum**2:
             self.printdata("False Positive")
@@ -212,21 +210,33 @@ class Ball(pygame.sprite.Sprite):
         # It always points in direction from self towards other
         normal = [dv[0]/dvmag, dv[1]/dvmag]
 
-        # Use normal to calculate new position and velocity
+        # Adjust the velocities
+        def dot(v1, v2):
+            return v1[0]*v2[0] + v1[1]*v2[1]
+
+        # Consider the other ball stationary (to simplify the equations)
+        dv = (self.velocity[0] - other.velocity[0],
+              self.velocity[1] - other.velocity[1])
+
+        # Rotate the normal 90º to find the tangent vector
+        tangent = [-normal[1], normal[0]]
+
+        # Project the velocities to tangent and normal for the output velocities
+        # For the other we use the normal instead
+        pt = dot(dv, tangent)
+        pn = dot(dv, normal)
+
+        # Update the velocities. adding the other velocity back
+        self.velocity[0]   = pt * tangent[0] + other.velocity[0]
+        self.velocity[1]   = pt * tangent[1] + other.velocity[1]
+        other.velocity[0] += pn * normal[0]
+        other.velocity[1] += pn * normal[1]
+
+        # Move circles away by half overlap each at normal direction
         for circle in [self, other]:
-
-            # Move circles away from each other by overlap amount at normal direction
-            circle.position[0] -= overlap/2 * normal[0]
-            circle.position[1] -= overlap/2 * normal[1]
+            circle.position[0] -= overlap/2. * normal[0]
+            circle.position[1] -= overlap/2. * normal[1]
             circle._update_rect()
-
-            # Adjust the velocities by rotating current velocity to the normal's direction
-            # (ie, multiply normal by current velocity magnitude)
-            vmag = math.sqrt(circle.velocity[0]**2 + circle.velocity[1]**2)
-            circle.velocity[0] = vmag * -normal[0]
-            circle.velocity[1] = vmag * -normal[1]
-
-            # rinse and repeat for other, using a reflected normal
             normal[0] *= -1
             normal[1] *= -1
 
