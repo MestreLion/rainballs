@@ -20,22 +20,26 @@
 #
 # TODO:
 # - Create a scale factor to map pixels to abstract meters
-# - Fix the damn collision response to avoid infinite bumping!
-# - Do so without breaking fully elastical bounces!
+# - Fix integrator / floor bouncing when damping is zero and gravity is active
+# - Mouseover/right click for ball properties
+# - Mouseclick and drag to move balls
+# - Avoid low-contrast colors against background
+# - Instructions (SHIFT to show/dismiss)
+# - Use mass in collision formula
 
 import sys
 import pygame
 import math
-from random import randint, random, choice
+from random import randint
 
 
 # General options
 BENCHMARK = False
 FULLSCREEN = False
 DEBUG = False
-AUTOPLAY = False
+AUTOPLAY = True
 TRACE = False
-BALLS = 2
+BALLS = 15
 
 
 # Colors
@@ -47,7 +51,7 @@ WHITE = (255, 255, 255)
 
 
 # Render stuff
-SCREEN_SIZE = (800, 800)     # Fullscreen ignores this and always use desktop resolution
+SCREEN_SIZE = (1600, 900)     # Fullscreen ignores this and always use desktop resolution
 FPS = 60  # 0 for unbounded
 BG_COLOR = WHITE
 
@@ -60,15 +64,11 @@ TIMESTEP = 1./FPS  # dt of physics simulation. Later to be FPS-independent
 
 EPSILON_V = max(abs(GRAVITY[0]),
                 abs(GRAVITY[1]))*TIMESTEP/2  # Velocity resolution threshold
-#EPSILON_S = 0.1
-#SCALE = 100  # How many pixels is a "meter"
 
 
-# Ball initial values
-radius = 100
-pos = [SCREEN_SIZE[0], 0]
-vel = [500, 0]
-elast = (1, 0.7)
+# Balls maximum values
+radius = 120
+vel = [400, 400]
 
 
 # Some singletons
@@ -103,7 +103,7 @@ class Ball(pygame.sprite.Sprite):
 
         # Derived properties
         self.area = self.radius * math.pi**2
-        self.mass = self.area * self.density
+        self.mass = 1 #self.area * self.density
         self.bounds = (screen.get_size()[0] - self.radius,
                        screen.get_size()[1] - self.radius)
         self.wallp = [0, 0]  # net momentum "absorbed" by the "infinite-mass" walls. What a dirty hack :P
@@ -291,8 +291,13 @@ def main(*argv):
 
     # Create the balls
     balls = pygame.sprite.Group()
-    balls.add(Ball(color=(randint(0,255), randint(0,255), randint(0,255)), radius=100, position=[150, 150], velocity=[ 100, 300]),
-              Ball(color=(randint(0,255), randint(0,255), randint(0,255)), radius=100, position=[650, 150], velocity=[-100, 300]),)
+    for _ in xrange(BALLS):
+        balls.add(Ball(color=(randint(0,255), randint(0,255), randint(0,255)),
+                       radius=randint(10, radius),
+                       position=[randint(100, screen.get_size()[0]-radius),
+                                 randint(100, screen.get_size()[1]-radius)],
+                       velocity=[randint(-vel[0], vel[0]), randint(-vel[0], vel[1])],
+                       ))
 
     # -------- Main Game Loop -----------
     trace = TRACE
