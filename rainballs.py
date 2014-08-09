@@ -69,6 +69,7 @@ EPSILON_V = max(abs(GRAVITY[0]),
 # Balls maximum values
 radius = 120
 vel = [400, 400]
+elast = 1
 
 
 # Some singletons
@@ -90,7 +91,7 @@ class Args(object):
 
 class Ball(pygame.sprite.Sprite):
     def __init__(self, color=WHITE, radius=10, position=[], velocity=[], density=1,
-                 elasticity=(1,1)):
+                 elasticity=1):
         super(Ball, self).__init__()
 
         # Basic properties
@@ -102,8 +103,8 @@ class Ball(pygame.sprite.Sprite):
         self.elasticity = elasticity
 
         # Derived properties
-        self.area = self.radius * math.pi**2
-        self.mass = 1 #self.area * self.density
+        self.area = math.pi * self.radius**2
+        self.mass = self.area * self.density
         self.bounds = (screen.get_size()[0] - self.radius,
                        screen.get_size()[1] - self.radius)
         self.wallp = [0, 0]  # net momentum "absorbed" by the "infinite-mass" walls. What a dirty hack :P
@@ -158,7 +159,7 @@ class Ball(pygame.sprite.Sprite):
             self.wallp[i] += self.mass * 2 * self.velocity[i]
 
             # Reflect velocity, dampered
-            self.velocity[i] *= -1 * min(self.elasticity[i], DAMPING[i])
+            self.velocity[i] *= -1 * DAMPING[i]
 
             # set to zero when low enough
             if abs(self.velocity[i]) < EPSILON_V:
@@ -310,7 +311,7 @@ def main(*argv):
     balls = pygame.sprite.Group()
     for _ in xrange(BALLS):
         balls.add(Ball(color=(randint(0,255), randint(0,255), randint(0,255)),
-                       radius=randint(10, radius),
+                       radius=randint(10, radius), elasticity=elast,
                        position=[randint(100, screen.get_size()[0]-radius),
                                  randint(100, screen.get_size()[1]-radius)],
                        velocity=[randint(-vel[0], vel[0]), randint(-vel[0], vel[1])],
