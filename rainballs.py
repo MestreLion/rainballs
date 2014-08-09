@@ -116,6 +116,23 @@ class Ball(pygame.sprite.Sprite):
         self.image.set_colorkey(BG_COLOR)
         pygame.draw.circle(self.image, self.color, 2*(self.radius,), self.radius)
 
+    @property
+    def momentum(self):
+        return (self.velocity[0] * self.mass,
+                self.velocity[1] * self.mass)
+
+    @property
+    def knectic(self):
+        """ Knectic energy: Ek = m|v|²/2 """
+        return self.mass * (self.velocity[0]**2 +
+                            self.velocity[1]**2) / 2.
+
+    @property
+    def potential(self):
+        """ Potential (gravitational) energy: Eu = mh|g| """
+        # Disregard horizontal gravity for now.
+        # Accurate result would be m * sqrt((gx*hx)²+(gy*hy)²)
+        return self.mass * abs(GRAVITY[1]) * (self.position[1] - self.radius)
 
     @property
     def on_ground(self):
@@ -376,9 +393,9 @@ def main(*argv):
                 P = [0, 0]
                 E = 0
                 for ball in balls:
-                    P[0] += ball.mass * ball.velocity[0] + ball.wallp[0]
-                    P[1] += ball.mass * ball.velocity[1] + ball.wallp[1]
-                    E += ball.mass * math.sqrt(ball.velocity[0]**2 + ball.velocity[1]**2)**2 / 2.
+                    P[0] += ball.momentum[0] + ball.wallp[0]
+                    P[1] += ball.momentum[1] + ball.wallp[1]
+                    E += ball.knectic + ball.potential
 
                 if not args.fullscreen:
                     pygame.display.set_caption(
