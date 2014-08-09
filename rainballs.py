@@ -151,12 +151,12 @@ class Ball(pygame.sprite.Sprite):
             return
 
         for i in [0, 1]:
-            # Apply velocity to position, Velocity Verlet method
-            self.position[i] += self.velocity[i] * dt + GRAVITY[i] * dt**2 / 2.
-
             # Apply gravity to velocity
-            if not (self.on_ground and self.velocity[i] == 0):  # looks sooo hackish...
+            if not (self.on_ground and self.velocity[i] == 0):
                 self.velocity[i] += GRAVITY[i] * dt
+
+            # Apply velocity to position, Implicit Euler method
+            self.position[i] += self.velocity[i] * dt
 
             # Check lower boundary
             if self.position[i] < self.radius:
