@@ -203,10 +203,10 @@ class Ball(pygame.sprite.Sprite):
         if other is self or self.position == other.position:
             return
 
-        # Calculate the subtraction vector and its magnitude squared
-        dv = [other.position[0] - self.position[0],
+        # Calculate the distance vector and its magnitude squared
+        ds = [other.position[0] - self.position[0],
               other.position[1] - self.position[1]]
-        mag2 = dv[0]**2 + dv[1]**2
+        mag2 = ds[0]**2 + ds[1]**2
 
         # Check for false positives from rect collision detection
         # by testing if distance^2 >= (sum of radii)^2
@@ -215,8 +215,8 @@ class Ball(pygame.sprite.Sprite):
             self.printdata("False Positive")
             return
 
-        # Calculate vector magnitude, which is also the distance between the balls
-        # and the overlap width (= distance - sum of radii)
+        # Calculate the distance vector magnitude (= the distance between the balls)
+        # Also calculate the overlap width (= distance - sum of radii)
         dvmag = math.sqrt(mag2)
         overlap = abs(dvmag - radsum)
 
@@ -224,39 +224,55 @@ class Ball(pygame.sprite.Sprite):
             print "collide! %r %r at [%.2f, %.2f], %.2f overlap" % (
                 self.color, other.color, self.position[0], self.position[0], overlap)
 
-        # Calculate the normal, the unit vector from centers to collision point
-        # It always points in direction from self towards other
-        normal = [dv[0]/dvmag, dv[1]/dvmag]
+        def sum(v1, v2):
+            return [v1[0]+v2[0], v1[1]+v2[1]]
 
-        # Adjust the velocities
+        def sub(v1, v2):
+            return [v1[0]-v2[0], v1[1]-v2[1]]
+
+        def mult(v, n):
+            return [v[0]*n, v[1]*n]
+
         def dot(v1, v2):
             return v1[0]*v2[0] + v1[1]*v2[1]
 
-        # Consider the other ball stationary (to simplify the equations)
-        dv = (self.velocity[0] - other.velocity[0],
-              self.velocity[1] - other.velocity[1])
+        # Some constants
+        CR = min(self.elasticity, other.elasticity)
+        invmass = 1. / (self.mass + other.mass)
+
+        # Calculate the normal, the unit vector from centers to collision point
+        # It always points in direction from self towards other
+        normal = [ds[0]/dvmag, ds[1]/dvmag]
 
         # Rotate the normal 90º to find the tangent vector
         tangent = [-normal[1], normal[0]]
 
-        # Project the velocities to tangent and normal for the output velocities
-        # For the other we use the normal instead
-        pt = dot(dv, tangent)
-        pn = dot(dv, normal)
+        # Project the velocities along the normal and tangent
+        uan = mult(normal,  dot(self.velocity,  normal))
+        uat = mult(tangent, dot(self.velocity,  tangent))
+        ubn = mult(normal,  dot(other.velocity, normal))
+        ubt = mult(tangent, dot(other.velocity, tangent))
 
-        # Update the velocities. adding the other velocity back
-        self.velocity[0]   = pt * tangent[0] + other.velocity[0]
-        self.velocity[1]   = pt * tangent[1] + other.velocity[1]
-        other.velocity[0] += pn * normal[0]
-        other.velocity[1] += pn * normal[1]
+        # Apply momentum conservation for inelastic collision along the normal components
+        # See https://en.wikipedia.org/wiki/Coefficient_of_restitution#Equation
+        dvn = sub(ubn, uan)
+        pn = sum(mult(uan, self.mass), mult(ubn, other.mass))
+        van = mult(sum(pn, mult(dvn, other.mass * CR)), invmass)
+        vbn = mult(sub(pn, mult(dvn, self.mass  * CR)), invmass)
 
-        # Move circles away by half overlap each at normal direction
-        for circle in [self, other]:
-            circle.position[0] -= overlap/2. * normal[0]
-            circle.position[1] -= overlap/2. * normal[1]
-            circle._update_rect()
-            normal[0] *= -1
-            normal[1] *= -1
+        # Update the velocities, adding normal and tangent components
+        self.velocity  = sum(van, uat)
+        other.velocity = sum(vbn, ubt)
+
+        # Move circles away at normal direction
+        # Each ball is displaced a fraction of offset inversely proportional to its mass
+        self.position[0]  -= normal[0] * overlap * other.mass * invmass
+        self.position[1]  -= normal[1] * overlap * other.mass * invmass
+        other.position[0] += normal[0] * overlap * self.mass  * invmass
+        other.position[1] += normal[1] * overlap * self.mass  * invmass
+
+        self._update_rect()
+        other._update_rect()
 
 
     def printdata(self, comment):
