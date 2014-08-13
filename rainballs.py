@@ -116,7 +116,7 @@ class Ball(pygame.sprite.Sprite):
         # Pygame sprite requirements
         self.image = pygame.Surface(2*[self.radius*2])
         self.rect = self.image.get_rect()
-        self._update_rect()
+        self.move((0, 0))
         self.image.fill(BG_COLOR)
         self.image.set_colorkey(BG_COLOR)
         pygame.draw.circle(self.image, self.color, 2*(self.radius,), self.radius)
@@ -142,7 +142,8 @@ class Ball(pygame.sprite.Sprite):
         return self.position[1] == self.radius
 
 
-    def _update_rect(self):
+    def move(self, delta):
+        self.position += delta
         self.rect.center = (int(self.position[0]),
                             int(screen.get_size()[1] - self.position[1]))
 
@@ -175,15 +176,17 @@ class Ball(pygame.sprite.Sprite):
             self.velocity += GRAVITY * dt
 
         # Apply velocity to position, Implicit Euler method
-        self.position += self.velocity * dt
+        self.move(self.velocity * dt)
 
         # Check boundaries
         for i in [0, 1]:
             if self.position[i] < self.radius:
-                self.position[i] = self.radius  # This could be refined... perhaps reflected? -self.position[i]
+                self.position[i] = self.radius
+                self.move((0, 0))
                 bounce()
             elif self.position[i] > self.bounds[i]:
                 self.position[i] = self.bounds[i]  # Reflection would be self.bounds[i]-(self.position[i]-self.bounds[i])
+                self.move((0, 0))
                 bounce()
 
         # Apply friction if ball is sliding on ground
@@ -194,8 +197,6 @@ class Ball(pygame.sprite.Sprite):
             # Make it stop if low enough
             if abs(self.velocity[0]) < EPSILON_V:
                 self.velocity[0] = 0
-
-        self._update_rect()
 
 
     def collide(self, other):
@@ -254,11 +255,8 @@ class Ball(pygame.sprite.Sprite):
 
         # Move circles away at normal direction
         # Each ball is displaced a fraction of offset inversely proportional to its mass
-        self.position  -= normal * overlap * other.mass * invmass
-        other.position += normal * overlap * self.mass  * invmass
-
-        self._update_rect()
-        other._update_rect()
+        self.move(-normal * overlap * other.mass * invmass)
+        other.move(normal * overlap * self.mass  * invmass)
 
 
     def printdata(self, comment):
