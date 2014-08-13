@@ -63,9 +63,9 @@ FRICTION = 0       # Kinetic coefficient of friction
 TIMESTEP = 1./FPS  # dt of physics simulation. Later to be FPS-independent
 SCALE = 100  # Velocity scale: how many pixels per second is 1 speed
 
-EPSILON_V = max(abs(GRAVITY[0]),
-                abs(GRAVITY[1]))*TIMESTEP/2  # Velocity resolution threshold
-EPSILON = 10**(-7)
+# Thresholds
+EPSILON_V = (GRAVITY.magnitude() * TIMESTEP * SCALE / 2.) or 1./(SCALE * 5) # Velocity
+EPSILON = 10**(-7)  # General floating point
 
 
 # Balls maximum values
@@ -347,7 +347,7 @@ def main(*argv):
         if not args.fullscreen:
             E, P = energy_momentum(balls)
             pygame.display.set_caption(
-                "%s - FPS: %.1f - Energy: %g, Momentum: [%g, %g]" % (
+                "%s - FPS: %02d - Energy: % .3e, Momentum: [% .3e, % .3e]" % (
                 caption, clock.get_fps(), E, P[0], P[1]))
 
     def render(clear=False):
