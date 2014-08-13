@@ -179,8 +179,9 @@ class Ball(pygame.sprite.Sprite):
         # Apply velocity to position, Implicit Euler method
         self.move(self.velocity * SCALE * dt)
 
-        # Check boundaries
+        # Check wall collisions
         for i in [0, 1]:
+            # Boundary checks
             if self.position[i] < self.radius:
                 self.position[i] = self.radius
                 self.move((0, 0))
@@ -189,6 +190,9 @@ class Ball(pygame.sprite.Sprite):
                 self.position[i] = self.bounds[i]  # Reflection would be self.bounds[i]-(self.position[i]-self.bounds[i])
                 self.move((0, 0))
                 bounce()
+            # Reset wall momentum if ball stops
+            if abs(self.velocity[i]) < EPSILON_V:
+                self.wallp[i] = 0
 
         # Apply friction if ball is sliding on ground
         if self.on_ground and self.velocity[1] == 0:
