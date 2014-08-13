@@ -65,6 +65,7 @@ TIMESTEP = 1./FPS  # dt of physics simulation. Later to be FPS-independent
 
 EPSILON_V = max(abs(GRAVITY[0]),
                 abs(GRAVITY[1]))*TIMESTEP/2  # Velocity resolution threshold
+EPSILON = 10**(-7)
 
 
 # Balls maximum values
@@ -392,6 +393,9 @@ def main(*argv):
                 for ball in balls:
                     P += ball.momentum + ball.wallp
                     E += ball.knectic + ball.potential
+                if -EPSILON < E    < EPSILON: E    = 0
+                if -EPSILON < P[0] < EPSILON: P[0] = 0
+                if -EPSILON < P[1] < EPSILON: P[1] = 0
 
                 if not args.fullscreen:
                     pygame.display.set_caption(
