@@ -91,6 +91,9 @@ class Args(object):
 
 
 class Ball(pygame.sprite.Sprite):
+
+    REFMASS = math.pi * 10**2  # Reference mass = ball with radius 10 and density 1
+
     def __init__(self, color=WHITE, radius=10, position=(), velocity=(), density=1,
                  elasticity=1):
         super(Ball, self).__init__()
@@ -105,7 +108,7 @@ class Ball(pygame.sprite.Sprite):
 
         # Derived properties
         self.area = math.pi * self.radius**2
-        self.mass = self.area * self.density
+        self.mass = self.area * self.density / self.REFMASS
         self.bounds = (screen.get_size()[0] - self.radius,
                        screen.get_size()[1] - self.radius)
         self.wallp = Vector2(0, 0)  # net momentum "absorbed" by the "infinite-mass" walls. What a dirty hack :P
