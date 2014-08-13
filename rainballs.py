@@ -319,6 +319,26 @@ def main(*argv):
     play = AUTOPLAY
     step = False
 
+    def energy_momentum(balls):
+        # Calculate kinetic energy and linear momentum
+        # P must be always constant, also E if damping is 1
+        P = Vector2(0, 0)
+        E = 0
+        for ball in balls:
+            P += ball.momentum + ball.wallp
+            E += ball.knectic + ball.potential
+        if -EPSILON < E    < EPSILON: E    = 0
+        if -EPSILON < P[0] < EPSILON: P[0] = 0
+        if -EPSILON < P[1] < EPSILON: P[1] = 0
+        return E, P
+
+    def update_caption():
+        if not args.fullscreen:
+            E, P = energy_momentum(balls)
+            pygame.display.set_caption(
+                "%s - FPS: %.1f - Energy: %g, Momentum: [%g, %g]" % (
+                caption, clock.get_fps(), E, P[0], P[1]))
+
     def render():
         if not trace:
             balls.clear(screen, background)
@@ -329,6 +349,7 @@ def main(*argv):
     clock = pygame.time.Clock()
     balls.update(0)
     render()
+    update_caption()
     elapsed = clock.tick(FPS)
 
     rendertimes = []
@@ -385,22 +406,7 @@ def main(*argv):
 
             if frames == (FPS or 100):
                 frames = 0
-
-                # Calculate kinetic energy and linear momentum
-                # P must be always constant, also E if damping is 1
-                P = Vector2(0, 0)
-                E = 0
-                for ball in balls:
-                    P += ball.momentum + ball.wallp
-                    E += ball.knectic + ball.potential
-                if -EPSILON < E    < EPSILON: E    = 0
-                if -EPSILON < P[0] < EPSILON: P[0] = 0
-                if -EPSILON < P[1] < EPSILON: P[1] = 0
-
-                if not args.fullscreen:
-                    pygame.display.set_caption(
-                        "%s - FPS: %.1f - Energy: %g, Momentum: [%g, %g]" % (
-                        caption,clock.get_fps(), E, P[0], P[1]))
+                update_caption()
 
             if step:
                 play = step = False
