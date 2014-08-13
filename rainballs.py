@@ -331,7 +331,8 @@ def main(*argv):
         P = Vector2(0, 0)
         E = 0
         for ball in balls:
-            P += ball.momentum + ball.wallp
+            p = ball.momentum
+            P += (p + ball.wallp) if abs(p) > EPSILON else (0, 0)
             E += ball.knectic + ball.potential
         if -EPSILON < E    < EPSILON: E    = 0
         if -EPSILON < P[0] < EPSILON: P[0] = 0
