@@ -38,9 +38,9 @@ from euclid import Vector2  # Pypi: euclid
 BENCHMARK = False
 FULLSCREEN = False
 DEBUG = False
-AUTOPLAY = True
+AUTOPLAY = False
 TRACE = False
-BALLS = 15
+BALLS = 42
 
 
 # Colors
@@ -69,8 +69,8 @@ EPSILON = 10**(-7)
 
 
 # Balls maximum values
-radius = 120
-vel = [400, 400]
+radius = 30
+vel = 250
 elast = 1
 
 
@@ -308,10 +308,10 @@ def main(*argv):
     balls = pygame.sprite.Group()
     for _ in xrange(BALLS):
         balls.add(Ball(color=(randint(0,255), randint(0,255), randint(0,255)),
-                       radius=randint(10, radius), elasticity=elast,
-                       position=[randint(100, screen.get_size()[0]-radius),
-                                 randint(100, screen.get_size()[1]-radius)],
-                       velocity=[randint(-vel[0], vel[0]), randint(-vel[0], vel[1])],
+                       radius=radius, elasticity=elast,
+                       position=[randint(radius, screen.get_size()[0]-radius),
+                                 randint(screen.get_size()[1]/4, screen.get_size()[1]-radius)],
+                       velocity=[0, -vel],
                        ))
 
     # -------- Main Game Loop -----------
