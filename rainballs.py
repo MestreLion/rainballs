@@ -58,7 +58,7 @@ BG_COLOR = WHITE
 
 
 # Physics stuff - Units in pixels/second
-GRAVITY = (0, 0)   # A vector, like everything else
+GRAVITY = Vector2(0, 0)
 DAMPING = (1, 1)   # Velocity restitution coefficient of collisions on boundaries
 FRICTION = 0       # Kinetic coefficient of friction
 TIMESTEP = 1./FPS  # dt of physics simulation. Later to be FPS-independent
@@ -91,15 +91,15 @@ class Args(object):
 
 
 class Ball(pygame.sprite.Sprite):
-    def __init__(self, color=WHITE, radius=10, position=[], velocity=[], density=1,
+    def __init__(self, color=WHITE, radius=10, position=(), velocity=(), density=1,
                  elasticity=1):
         super(Ball, self).__init__()
 
         # Basic properties
         self.color = color
         self.radius = radius
-        self.position = list(position) or [0, 0]
-        self.velocity = list(velocity) or [0, 0]
+        self.position = Vector2(*position) or Vector2(0, 0)
+        self.velocity = Vector2(*velocity) or Vector2(0, 0)
         self.density = density
         self.elasticity = elasticity
 
@@ -108,7 +108,7 @@ class Ball(pygame.sprite.Sprite):
         self.mass = self.area * self.density
         self.bounds = (screen.get_size()[0] - self.radius,
                        screen.get_size()[1] - self.radius)
-        self.wallp = [0, 0]  # net momentum "absorbed" by the "infinite-mass" walls. What a dirty hack :P
+        self.wallp = Vector2(0, 0)  # net momentum "absorbed" by the "infinite-mass" walls. What a dirty hack :P
 
         # Pygame sprite requirements
         self.image = pygame.Surface(2*[self.radius*2])
@@ -120,14 +120,12 @@ class Ball(pygame.sprite.Sprite):
 
     @property
     def momentum(self):
-        return (self.velocity[0] * self.mass,
-                self.velocity[1] * self.mass)
+        return self.velocity * self.mass
 
     @property
     def knectic(self):
         """ Knectic energy: Ek = m|v|²/2 """
-        return self.mass * (self.velocity[0]**2 +
-                            self.velocity[1]**2) / 2.
+        return self.mass * self.velocity.magnitude_squared() / 2.
 
     @property
     def potential(self):
@@ -169,20 +167,18 @@ class Ball(pygame.sprite.Sprite):
         if self.velocity == [0, 0] and self.on_ground:
             return
 
+        # Apply gravity to velocity
+        if not (self.on_ground and self.velocity[1] == 0):
+            self.velocity += GRAVITY * dt
+
+        # Apply velocity to position, Implicit Euler method
+        self.position += self.velocity * dt
+
+        # Check boundaries
         for i in [0, 1]:
-            # Apply gravity to velocity
-            if not (self.on_ground and self.velocity[i] == 0):
-                self.velocity[i] += GRAVITY[i] * dt
-
-            # Apply velocity to position, Implicit Euler method
-            self.position[i] += self.velocity[i] * dt
-
-            # Check lower boundary
             if self.position[i] < self.radius:
                 self.position[i] = self.radius  # This could be refined... perhaps reflected? -self.position[i]
                 bounce()
-
-            # Check upper boundary
             elif self.position[i] > self.bounds[i]:
                 self.position[i] = self.bounds[i]  # Reflection would be self.bounds[i]-(self.position[i]-self.bounds[i])
                 bounce()
@@ -205,9 +201,8 @@ class Ball(pygame.sprite.Sprite):
             return
 
         # Calculate the distance vector and its magnitude squared
-        ds = [other.position[0] - self.position[0],
-              other.position[1] - self.position[1]]
-        mag2 = ds[0]**2 + ds[1]**2
+        ds = other.position - self.position
+        mag2 = ds.magnitude_squared()
 
         # Check for false positives from rect collision detection
         # by testing if distance^2 >= (sum of radii)^2
@@ -222,8 +217,8 @@ class Ball(pygame.sprite.Sprite):
         overlap = abs(dvmag - radsum)
 
         if args.debug:
-            print "collide! %r %r at [%.2f, %.2f], %.2f overlap" % (
-                self.color, other.color, self.position[0], self.position[0], overlap)
+            print "collide! %r %r at %s, %.2f overlap" % (
+                self.color, other.color, self.position, overlap)
 
         # Some constants
         CR = min(self.elasticity, other.elasticity)
@@ -231,19 +226,17 @@ class Ball(pygame.sprite.Sprite):
 
         # Calculate the normal, the unit vector from centers to collision point
         # It always points in direction from self towards other
-        normal = Vector2(ds[0]/dvmag, ds[1]/dvmag)
+        normal = ds/dvmag
 
         # Rotate the normal 90º to find the tangent vector
         tangent = Vector2(-normal[1], normal[0])
 
         # Project the velocities along the normal and tangent
-        ua  = Vector2(*self.velocity)
-        uan = ua.project(normal)
-        uat = ua.project(tangent)
+        uan = self.velocity.project(normal)
+        uat = self.velocity.project(tangent)
 
-        ub  = Vector2(*other.velocity)
-        ubn = ub.project(normal)
-        ubt = ub.project(tangent)
+        ubn = other.velocity.project(normal)
+        ubt = other.velocity.project(tangent)
 
         # Apply momentum conservation for inelastic collision along the normal components
         # See https://en.wikipedia.org/wiki/Coefficient_of_restitution#Equation
@@ -253,15 +246,13 @@ class Ball(pygame.sprite.Sprite):
         vbn = (pn - dvn * self.mass  * CR) * invmass
 
         # Update the velocities, adding normal and tangent components
-        self.velocity  = list(van + uat)
-        other.velocity = list(vbn + ubt)
+        self.velocity  = van + uat
+        other.velocity = vbn + ubt
 
         # Move circles away at normal direction
         # Each ball is displaced a fraction of offset inversely proportional to its mass
-        self.position[0]  -= normal[0] * overlap * other.mass * invmass
-        self.position[1]  -= normal[1] * overlap * other.mass * invmass
-        other.position[0] += normal[0] * overlap * self.mass  * invmass
-        other.position[1] += normal[1] * overlap * self.mass  * invmass
+        self.position  -= normal * overlap * other.mass * invmass
+        other.position += normal * overlap * self.mass  * invmass
 
         self._update_rect()
         other._update_rect()
@@ -269,11 +260,8 @@ class Ball(pygame.sprite.Sprite):
 
     def printdata(self, comment):
         if args.debug:
-            print "id=%s p=[%7.2f, %7.2f] v=[%7.2f, %7.2f] %s" % (
-                self.color,
-                self.position[0], self.position[1],
-                self.velocity[0], self.velocity[1],
-                comment)
+            print "id=%s p=%s v=%s %s" % (
+                self.color, self.position, self.velocity, comment)
 
 
 
@@ -399,16 +387,15 @@ def main(*argv):
 
                 # Calculate kinetic energy and linear momentum
                 # P must be always constant, also E if damping is 1
-                P = [0, 0]
+                P = Vector2(0, 0)
                 E = 0
                 for ball in balls:
-                    P[0] += ball.momentum[0] + ball.wallp[0]
-                    P[1] += ball.momentum[1] + ball.wallp[1]
+                    P += ball.momentum + ball.wallp
                     E += ball.knectic + ball.potential
 
                 if not args.fullscreen:
                     pygame.display.set_caption(
-                        "%s - FPS: %.1f - Energy: %.1f, Momentum: [%.1f, %.1f]" % (
+                        "%s - FPS: %.1f - Energy: %g, Momentum: [%g, %g]" % (
                         caption,clock.get_fps(), E, P[0], P[1]))
 
             if step:
