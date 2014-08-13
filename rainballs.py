@@ -315,8 +315,12 @@ def main(*argv):
                        ))
 
     # -------- Main Game Loop -----------
-    trace = TRACE
-    play = AUTOPLAY
+    if args.benchmark:
+        trace = False
+        play = True
+    else:
+        trace = TRACE
+        play = AUTOPLAY
     step = False
 
     def findBall(balls, x, y):
@@ -387,15 +391,17 @@ def main(*argv):
                     clear = True
                     trace = not trace
                 if event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
-                    play = not play
-                    if not play:
-                        balls.sprites()[0].printdata("Paused")
+                    if not args.benchmark:
+                        play = not play
+                        if not play:
+                            balls.sprites()[0].printdata("Paused")
                 if event.key == pygame.K_SPACE:
-                    if play:
-                        play = False
-                        balls.sprites()[0].printdata("Paused")
-                    else:
-                        play = step = True
+                    if not args.benchmark:
+                        if play:
+                            play = False
+                            balls.sprites()[0].printdata("Paused")
+                        else:
+                            play = step = True
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 selected = findBall(balls, *pygame.mouse.get_pos())
