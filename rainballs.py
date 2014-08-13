@@ -25,12 +25,13 @@
 # - Mouseclick and drag to move balls
 # - Avoid low-contrast colors against background
 # - Instructions (SHIFT to show/dismiss)
-# - Use mass in collision formula
 
 import sys
-import pygame
 import math
 from random import randint
+
+import pygame  # Debian: python-pygame
+from euclid import Vector2  # Pypi: euclid
 
 
 # General options
@@ -224,45 +225,36 @@ class Ball(pygame.sprite.Sprite):
             print "collide! %r %r at [%.2f, %.2f], %.2f overlap" % (
                 self.color, other.color, self.position[0], self.position[0], overlap)
 
-        def sum(v1, v2):
-            return [v1[0]+v2[0], v1[1]+v2[1]]
-
-        def sub(v1, v2):
-            return [v1[0]-v2[0], v1[1]-v2[1]]
-
-        def mult(v, n):
-            return [v[0]*n, v[1]*n]
-
-        def dot(v1, v2):
-            return v1[0]*v2[0] + v1[1]*v2[1]
-
         # Some constants
         CR = min(self.elasticity, other.elasticity)
         invmass = 1. / (self.mass + other.mass)
 
         # Calculate the normal, the unit vector from centers to collision point
         # It always points in direction from self towards other
-        normal = [ds[0]/dvmag, ds[1]/dvmag]
+        normal = Vector2(ds[0]/dvmag, ds[1]/dvmag)
 
         # Rotate the normal 90º to find the tangent vector
-        tangent = [-normal[1], normal[0]]
+        tangent = Vector2(-normal[1], normal[0])
 
         # Project the velocities along the normal and tangent
-        uan = mult(normal,  dot(self.velocity,  normal))
-        uat = mult(tangent, dot(self.velocity,  tangent))
-        ubn = mult(normal,  dot(other.velocity, normal))
-        ubt = mult(tangent, dot(other.velocity, tangent))
+        ua  = Vector2(*self.velocity)
+        uan = ua.project(normal)
+        uat = ua.project(tangent)
+
+        ub  = Vector2(*other.velocity)
+        ubn = ub.project(normal)
+        ubt = ub.project(tangent)
 
         # Apply momentum conservation for inelastic collision along the normal components
         # See https://en.wikipedia.org/wiki/Coefficient_of_restitution#Equation
-        dvn = sub(ubn, uan)
-        pn = sum(mult(uan, self.mass), mult(ubn, other.mass))
-        van = mult(sum(pn, mult(dvn, other.mass * CR)), invmass)
-        vbn = mult(sub(pn, mult(dvn, self.mass  * CR)), invmass)
+        dvn = ubn - uan
+        pn  = uan * self.mass + ubn * other.mass
+        van = (pn + dvn * other.mass * CR) * invmass
+        vbn = (pn - dvn * self.mass  * CR) * invmass
 
         # Update the velocities, adding normal and tangent components
-        self.velocity  = sum(van, uat)
-        other.velocity = sum(vbn, ubt)
+        self.velocity  = list(van + uat)
+        other.velocity = list(vbn + ubt)
 
         # Move circles away at normal direction
         # Each ball is displaced a fraction of offset inversely proportional to its mass
