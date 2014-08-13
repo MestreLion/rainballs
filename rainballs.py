@@ -346,16 +346,26 @@ def main(*argv):
                 "%s - FPS: %.1f - Energy: %g, Momentum: [%g, %g]" % (
                 caption, clock.get_fps(), E, P[0], P[1]))
 
-    def render():
+    def render(clear=False):
+        dirty = []
         if not trace:
+            dirty.extend(_ for _ in balls.spritedict.values() if _ is not 0)
             balls.clear(screen, background)
+        if clear:
+            dirty = [background.get_rect()]
+            screen.blit(background, dirty[0])
+        else:
+            dirty.extend(_.rect for _ in balls)
         balls.draw(screen)
+        # Pass dirty as argument to pygame.display.update()
+        # to enable optimization: *huge* performance boost for few balls,
+        # but looked ugly in tests, so not worth it for >15 balls
         pygame.display.update()
 
     # draw t=0
     clock = pygame.time.Clock()
     balls.update(0)
-    render()
+    render(True)
     update_caption()
     elapsed = clock.tick(FPS)
 
@@ -364,6 +374,7 @@ def main(*argv):
     updatetimes = []
     fpslist = []
     frames = 0  # not absolute! Gets reset at intervals
+    clear = False
     done = False
     while not done:
         for event in pygame.event.get():
@@ -373,7 +384,7 @@ def main(*argv):
 
             if event.type == pygame.KEYDOWN:
                 if event.key in [pygame.K_LCTRL, pygame.K_RCTRL]:
-                    screen.blit(background, background.get_rect())
+                    clear = True
                     trace = not trace
                 if event.key in [pygame.K_RETURN, pygame.K_KP_ENTER]:
                     play = not play
@@ -411,7 +422,8 @@ def main(*argv):
 
             # Draw
             t2 = pygame.time.get_ticks()
-            render()
+            render(clear)
+            clear = False
             t3 = pygame.time.get_ticks()
             frames += 1
 
