@@ -61,6 +61,7 @@ GRAVITY = Vector2(0, 0)
 DAMPING = (1, 1)   # Velocity restitution coefficient of collisions on boundaries
 FRICTION = 0       # Kinetic coefficient of friction
 TIMESTEP = 1./FPS  # dt of physics simulation. Later to be FPS-independent
+SCALE = 100  # Velocity scale: how many pixels per second is 1 speed
 
 EPSILON_V = max(abs(GRAVITY[0]),
                 abs(GRAVITY[1]))*TIMESTEP/2  # Velocity resolution threshold
@@ -69,7 +70,7 @@ EPSILON = 10**(-7)
 
 # Balls maximum values
 radius = 120
-vel = [400, 400]
+vel = [4, 4]
 elast = 1
 
 
@@ -176,7 +177,7 @@ class Ball(pygame.sprite.Sprite):
             self.velocity += GRAVITY * dt
 
         # Apply velocity to position, Implicit Euler method
-        self.move(self.velocity * dt)
+        self.move(self.velocity * SCALE * dt)
 
         # Check boundaries
         for i in [0, 1]:
@@ -395,7 +396,7 @@ def main(*argv):
                 (mouseX, mouseY) = pygame.mouse.get_pos()
                 dx = mouseX - selected.rect.centerx
                 dy = mouseY - selected.rect.centery
-                selected.velocity = Vector2(dx, -dy) * 10
+                selected.velocity = Vector2(dx, -dy) * 10. / SCALE
 
             # Update
             t1 = pygame.time.get_ticks()
