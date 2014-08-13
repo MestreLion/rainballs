@@ -31,8 +31,7 @@ import math
 from random import randint
 
 import pygame  # Debian: python-pygame
-from euclid import Vector2  # Pypi: euclid
-
+from euclid import Vector2, Point2, Circle  # Pypi: euclid
 
 # General options
 BENCHMARK = False
@@ -296,7 +295,6 @@ def main(*argv):
     if args.fullscreen:
         flags |= pygame.FULLSCREEN | pygame.HWSURFACE | pygame.DOUBLEBUF
         size = (0, 0)  # current desktop resolution
-        pygame.mouse.set_visible(False)
     screen = pygame.display.set_mode(size, flags)
 
     # Set the background
@@ -318,6 +316,12 @@ def main(*argv):
     trace = TRACE
     play = AUTOPLAY
     step = False
+
+    def findBall(balls, x, y):
+        for ball in balls:
+            circle = Circle(Vector2(*ball.rect.center), float(ball.radius))
+            if Point2(x, y).intersect(circle):
+                return ball
 
     def energy_momentum(balls):
         # Calculate kinetic energy and linear momentum
@@ -352,6 +356,7 @@ def main(*argv):
     update_caption()
     elapsed = clock.tick(FPS)
 
+    selected = None
     rendertimes = []
     updatetimes = []
     fpslist = []
@@ -378,7 +383,18 @@ def main(*argv):
                     else:
                         play = step = True
 
+            if event.type == pygame.MOUSEBUTTONDOWN:
+                selected = findBall(balls, *pygame.mouse.get_pos())
+            if event.type == pygame.MOUSEBUTTONUP:
+                selected = None
+
         if play:
+
+            if selected:
+                (mouseX, mouseY) = pygame.mouse.get_pos()
+                dx = mouseX - selected.rect.centerx
+                dy = mouseY - selected.rect.centery
+                selected.velocity = Vector2(dx, -dy) * 10
 
             # Update
             t1 = pygame.time.get_ticks()
