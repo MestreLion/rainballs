@@ -143,6 +143,12 @@ class Ball(pygame.sprite.Sprite):
         return self.position[1] == self.radius
 
 
+    def select(self):
+        pygame.draw.circle(self.image, BLACK, 2*(self.radius,), self.radius/2)
+
+    def deselect(self):
+        pygame.draw.circle(self.image, self.color, 2*(self.radius,), self.radius)
+
     def move(self, delta):
         self.position += delta
         self.rect.center = (int(self.position[0]),
@@ -409,7 +415,11 @@ def main(*argv):
 
             if event.type == pygame.MOUSEBUTTONDOWN:
                 selected = findBall(balls, *pygame.mouse.get_pos())
+                if selected:
+                    selected.select()
             if event.type == pygame.MOUSEBUTTONUP:
+                if selected:
+                    selected.deselect()
                 selected = None
 
         if play:
