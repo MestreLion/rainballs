@@ -39,7 +39,7 @@ FULLSCREEN = False
 DEBUG = False
 AUTOPLAY = True
 TRACE = False
-BALLS = 15
+BALLS = 20
 
 
 # Colors
@@ -52,7 +52,7 @@ WHITE = (255, 255, 255)
 
 # Render stuff
 SCREEN_SIZE = (1600, 900)     # Fullscreen ignores this and always use desktop resolution
-FPS = 60  # 0 for unbounded
+FPS = 30  # 0 for unbounded
 BG_COLOR = WHITE
 
 
@@ -70,7 +70,7 @@ EPSILON = 10**(-7)  # General floating point
 
 # Balls maximum values
 radius = 120
-vel = [4, 4]
+vel = [3, 3]
 elast = 1
 
 
@@ -144,9 +144,11 @@ class Ball(pygame.sprite.Sprite):
 
 
     def select(self):
+        self.wallp = Vector2(0, 0)
         pygame.draw.circle(self.image, BLACK, 2*(self.radius,), self.radius/2)
 
     def deselect(self):
+        self.wallp = Vector2(0, 0)
         pygame.draw.circle(self.image, self.color, 2*(self.radius,), self.radius)
 
     def move(self, delta):
