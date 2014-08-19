@@ -52,7 +52,7 @@ WHITE = (255, 255, 255)
 
 # Render stuff
 SCREEN_SIZE = (1600, 900)     # Fullscreen ignores this and always use desktop resolution
-FPS = 30  # 0 for unbounded
+FPS = 60  # 0 for unbounded
 BG_COLOR = WHITE
 
 
@@ -291,7 +291,7 @@ def main(*argv):
     if args.benchmark:
         FPS = 0
 
-    pygame.init()
+    pygame.display.init()
 
     # Set caption and icon
     caption = "Rain Balls"
@@ -317,7 +317,7 @@ def main(*argv):
     screen.blit(background, (0,0))
 
     # Create the balls
-    balls = pygame.sprite.Group()
+    balls = pygame.sprite.RenderUpdates()
     for _ in xrange(BALLS):
         balls.add(Ball(color=(randint(0,255), randint(0,255), randint(0,255)),
                        radius=randint(10, radius), elasticity=elast,
@@ -363,27 +363,19 @@ def main(*argv):
                 caption, clock.get_fps(), E, P[0], P[1]))
 
     def render(clear=False):
-        dirty = []
         if not trace:
-            dirty.extend(_ for _ in balls.spritedict.values() if _ is not 0)
             balls.clear(screen, background)
         if clear:
-            dirty = [background.get_rect()]
-            screen.blit(background, dirty[0])
-        else:
-            dirty.extend(_.rect for _ in balls)
-        balls.draw(screen)
-        # Pass dirty as argument to pygame.display.update()
-        # to enable optimization: *huge* performance boost for few balls,
-        # but looked ugly in tests, so not worth it for >15 balls
-        pygame.display.update()
+            screen.blit(background, (0, 0))
+        updates = balls.draw(screen)
+        pygame.display.update(updates)
 
     # draw t=0
     clock = pygame.time.Clock()
     balls.update(0)
     render(True)
     update_caption()
-    elapsed = clock.tick(FPS)
+    clock.tick(FPS)
 
     selected = None
     rendertimes = []
@@ -465,7 +457,7 @@ def main(*argv):
                 play = step = False
                 balls.sprites()[0].printdata("Frame")
 
-        elapsed = clock.tick(FPS)
+        clock.tick(FPS)
 
     if args.benchmark and fpslist :
         def printtimes(name, times, limit, lowerisbetter=False):
