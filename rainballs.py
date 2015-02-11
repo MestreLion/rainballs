@@ -368,6 +368,8 @@ def main(*argv):
         if clear:
             screen.blit(background, (0, 0))
         updates = balls.draw(screen)
+        if clear:
+            updates = screen.get_rect()
         pygame.display.update(updates)
 
     # draw t=0
