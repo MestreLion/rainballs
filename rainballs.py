@@ -1,5 +1,4 @@
-#!/usr/bin/python
-# -*- coding: utf-8 -*-
+#!/usr/bin/env python3
 #
 # rainballs - A Rain of Balls
 #
@@ -51,17 +50,17 @@ WHITE = (255, 255, 255)
 
 
 # Render stuff
-SCREEN_SIZE = (1600, 900)     # Fullscreen ignores this and always use desktop resolution
-FPS = 60  # 0 for unbounded
+SCREEN_SIZE = (1600, 900)  # Fullscreen ignores this and always use desktop resolution
+FPS = 60                   # 0 for unbounded
 BG_COLOR = WHITE
 
 
 # Physics stuff - Units in pixels/second
-GRAVITY = Vector2(0, 0)
-DAMPING = (1, 1)   # Velocity restitution coefficient of collisions on boundaries
-FRICTION = 0       # Kinetic coefficient of friction
-TIMESTEP = 1./FPS  # dt of physics simulation. Later to be FPS-independent
-SCALE = 100  # Velocity scale: how many pixels per second is 1 speed
+GRAVITY = Vector2(0, -2)
+DAMPING = (0.8, 0.8)      # Velocity restitution coefficient of collisions on boundaries
+FRICTION = 0.1            # Kinetic coefficient of friction
+TIMESTEP = 1./FPS         # dt of physics simulation. Later to be FPS-independent
+SCALE = 100               # Velocity scale: how many pixels per second is 1 speed
 
 # Thresholds
 EPSILON_V = (GRAVITY.magnitude() * TIMESTEP * SCALE / 2.) or 1./(SCALE * 5) # Velocity
@@ -80,7 +79,9 @@ screen = None
 background = None
 balls = None
 
-
+if sys.version_info[0] < 3:
+    class FileNotFoundError(Exception):
+        pass
 
 
 class Args(object):
@@ -145,7 +146,7 @@ class Ball(pygame.sprite.Sprite):
 
     def select(self):
         self.wallp = Vector2(0, 0)
-        pygame.draw.circle(self.image, BLACK, 2*(self.radius,), self.radius/2)
+        pygame.draw.circle(self.image, BLACK, 2*(self.radius,), int(self.radius/2))
 
     def deselect(self):
         self.wallp = Vector2(0, 0)
@@ -234,8 +235,8 @@ class Ball(pygame.sprite.Sprite):
         overlap = abs(dvmag - radsum)
 
         if args.debug:
-            print "collide! %r %r at %s, %.2f overlap" % (
-                self.color, other.color, self.position, overlap)
+            print("collide! %r %r at %s, %.2f overlap" % (
+                self.color, other.color, self.position, overlap))
 
         # Some constants
         CR = min(self.elasticity, other.elasticity)
@@ -274,8 +275,8 @@ class Ball(pygame.sprite.Sprite):
 
     def printdata(self, comment):
         if args.debug:
-            print "id=%s p=%s v=%s %s" % (
-                self.color, self.position, self.velocity, comment)
+            print("id=%s p=%s v=%s %s" % (
+                self.color, self.position, self.velocity, comment))
 
 
 
@@ -300,8 +301,8 @@ def main(*argv):
         try:
             icon = pygame.image.load("/usr/share/pyshared/pygame/pygame_icon.tiff")
             pygame.display.set_icon(icon)
-        except pygame.error as e:
-            print e
+        except (pygame.error, FileNotFoundError) as e:
+            print(e)
 
     # Set the screen
     flags = 0
@@ -318,7 +319,7 @@ def main(*argv):
 
     # Create the balls
     balls = pygame.sprite.RenderUpdates()
-    for _ in xrange(BALLS):
+    for __ in range(BALLS):
         balls.add(Ball(color=(randint(0,255), randint(0,255), randint(0,255)),
                        radius=randint(10, radius), elasticity=elast,
                        position=[randint(100, screen.get_size()[0]-radius),
@@ -466,9 +467,9 @@ def main(*argv):
             fail = sum(1 for x in times if (x<limit if lowerisbetter else x>limit))
             total = len(times)
             failp = 100. * fail / total
-            print ("%s: " + 6*"%3d  ") % (
-                name, min(times), sum(times)/total, max(times), limit, fail, failp)
-        print      "t (ms): min, avg, max, top, fail   %"
+            print(("%s: " + 6*"%3d  ") % (
+                name, min(times), sum(times)/total, max(times), limit, fail, failp))
+        print(     "t (ms): min, avg, max, top, fail   %")
         printtimes("Update", updatetimes, TIMESTEP*1000)
         printtimes("Render", rendertimes, TIMESTEP*1000)
         printtimes("FPS   ", fpslist, 1./TIMESTEP, True)
